@@ -1,8 +1,8 @@
-Convead плагин дл¤ Webasyst с модулем Shop-Script 6
+Convead плагин для Webasyst с модулем Shop-Script 6
 
-–учна¤ установка:
-- ѕеренести все файлы на сервер в соответствующие директории.
-- ќткрыть файл wa-config\apps\shop\plugins.php и дописать в конец "'convead' => true"
-- ќткрыть файл темы оформлени¤ в директории wa-data/public/site/themes/[theme-name]/index.html (¬место [theme-name] должно быть им¤ текущей темы оформлени¤). ѕеред закрывающим </head> поставить смарти-тег {siteConveadPlugin::widget()}
-- ќчистить кеш на странице "настройка".
-- «айти в настройку плагина convead магазина по адресу http://your-site/webasyst/shop/?action=plugins#/convead/ и ввести ваш API ключ
+– Ручная установка:
+- Перенести все файлы на сервер в соответствующие директории.
+- Открыть файл wa-config\apps\shop\plugins.php и дописать в конец "'convead' => true"
+- Открыть файл темы оформлени¤ в директории wa-data/public/site/themes/[theme-name]/index.html (вместо [theme-name] должно быть им¤ текущей темы оформления). ѕеред закрывающим </head> поставить смарти-тег {siteConveadPlugin::widget()}
+- Очистить кеш на странице "настройка".
+- Зайти в настройку плагина convead магазина по адресу http://your-site/webasyst/shop/?action=plugins#/convead/ и ввести ваш API ключ
