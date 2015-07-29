@@ -1,0 +1,23 @@
+<h1>Настройка Convead</h1>
+
+<div class="fields form" id="widget_id_form">
+    <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
+        {$wa->csrf()}
+          <div class="field">
+            <div class="name">API key<br/>
+            </div>
+            <div class="value">
+				<input type="text" name="shop_convead[options][api_key]" value="{$settings.options.api_key}" />
+            </div>
+        </div><br>
+
+        <div class="field">
+            <div class="value submit">
+                <input type="submit" class="button green" value="Сохранить">
+                <span id="plugins-settings-form-status" style="display:none">
+                    <i style="vertical-align:middle" class="icon16 yes"></i> [`Saved`]
+                </span>
+            </div>
+        </div>
+    </form>
+</div>
