@@ -50,9 +50,8 @@ class shopConveadPlugin extends shopPlugin
 		$auth = new waAuth();
 		
 		if ($auth_info = $auth->isAuth()) $user_id = $auth_info['id'];
-		else if (empty($_SERVER['SERVER_NAME'])) return false;
 
-		$convead = new ConveadTracker($settings['options']['api_key'], $_SERVER['SERVER_NAME'], $_COOKIE['convead_guest_uid'], (isset($user_id) ? $user_id : false), (isset($visitor_info) ? $visitor_info : false));
+		$convead = new ConveadTracker($settings['options']['api_key'], waRequest::server('SERVER_NAME'), waRequest::cookie('convead_guest_uid'), (isset($user_id) ? $user_id : false), (isset($visitor_info) ? $visitor_info : false));
 		
 		return $convead;
 	}
