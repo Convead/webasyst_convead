@@ -5,8 +5,8 @@ class siteConveadPlugin extends shopPlugin
 	
 	public static $product = false;
 
-    public static function widget()
-    {
+  public static function widget()
+  {
 		$plugin = wa('shop')->getPlugin('convead');
 
 		$settings = $plugin->getSettings();
@@ -60,6 +60,6 @@ class siteConveadPlugin extends shopPlugin
 		<!-- /Convead Widget -->";
 		
 		return $ret;
-    }
+  }
 
 }
