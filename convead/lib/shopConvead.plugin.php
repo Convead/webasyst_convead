@@ -45,7 +45,7 @@ class shopConveadPlugin extends shopPlugin
 		$settings = $this->getSettings();
 		if (empty($settings['options']['api_key'])) return false;
 
-		include_once('api/ConveadTracker.php');
+		include_once('vendors/ConveadTracker.php');
 		
 		$auth = new waAuth();
 		
