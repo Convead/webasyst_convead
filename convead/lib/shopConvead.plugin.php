@@ -23,21 +23,21 @@ class shopConveadPlugin extends shopPlugin
 		if (!($convead = $this->_include_api())) return false;
 	
 		$order_items_model = new shopOrderItemsModel();
-		$items = $order_items_model->getByField('order_id', $params['id'], true);
+		$items = $order_items_model->getByField('order_id', $params['order_id'], true);
 		$order_array = array();
+		$total_price = 0;
 		foreach($items as $product)
 		{
 			$order_array[] = array('product_id' => $product['product_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
+			$total_price = $total_price + ($product['price']*$product['quantity']);
 		}
 
-		$convead->eventOrder($params['id'], $params['total'], $order_array);
+		$convead->eventOrder($params['order_id'], $total_price, $order_array);
 	}
 	
 	public function view_product($params)
 	{
-		$product_model = new shopProductModel();
-		$siteConvead = new siteConveadPlugin();
-		$siteConvead::$product = $product_model->getByField('url', waRequest::param('product_url'));
+		new siteConveadPlugin();
 	}
 	
 	private function _include_api()

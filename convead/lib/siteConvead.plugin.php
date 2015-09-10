@@ -2,8 +2,6 @@
 
 class siteConveadPlugin extends shopPlugin
 {
-	
-	public static $product = false;
 
   public static function widget()
   {
@@ -31,9 +29,10 @@ class siteConveadPlugin extends shopPlugin
 			";
 		}
 		
-		if (self::$product)
+		$product_model = new shopProductModel();
+		$product = $product_model->getByField('url', waRequest::param('product_url'));
+		if ($product)
 		{
-			$product = self::$product;
 			$js_ready = "
 				convead('event', 'view_product', {
 					product_id: '{$product["id"]}',

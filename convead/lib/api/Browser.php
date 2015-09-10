@@ -4,7 +4,7 @@
  * Класс для работы с post запросами
  */
 class Browser {
-    public $version = '1.1.1';
+    public $version = '1.1.2';
 
     protected $config = array();
     public $error = false;
@@ -78,7 +78,9 @@ class Browser {
         $curl = curl_init($url);
 
         curl_setopt($curl, CURLOPT_FAILONERROR, true);
-
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+        
         if ($post) {
             curl_setopt($curl, CURLOPT_POST, 1);
             curl_setopt($curl, CURLOPT_POSTFIELDS, $post);

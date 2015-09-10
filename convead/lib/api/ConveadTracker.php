@@ -4,7 +4,7 @@
  * Класс для работы с сервисом convead.io
  */
 class ConveadTracker {
-    public $version = '1.1.3';
+    public $version = '1.1.4';
 
     private $browser;
     private $api_key;
@@ -12,7 +12,7 @@ class ConveadTracker {
     private $visitor_info = false;
     private $visitor_uid = false;
     private $referrer = false;
-    private $api_page = "http://tracker.convead.io/watch/event";
+    private $api_page = "https://tracker.convead.io/watch/event";
     private $url = false;
     private $domain = false;
     private $charset = 'utf-8';
@@ -25,18 +25,18 @@ class ConveadTracker {
      * @param type $guest_uid
      * @param type $visitor_uid
      * @param type $visitor_info структура с параметрами текущего визитора (все параметры опциональные) следующего вида:
-      [
-      first_name: 'Name',
-      last_name: 'Surname',
-      email: 'email',
-      phone: '1-111-11-11-11',
-      date_of_birth: '1984-06-16',
-      gender: 'male',
-      language: 'ru',
-      custom_field_1: 'custom value 1',
-      custom_field_2: 'custom value 2',
-      ...
-      ]
+      {
+        first_name: 'Name',
+        last_name: 'Surname',
+        email: 'email',
+        phone: '1-111-11-11-11',
+        date_of_birth: '1984-06-16',
+        gender: 'male',
+        language: 'ru',
+        custom_field_1: 'custom value 1',
+        custom_field_2: 'custom value 2',
+        ...
+      }
      * @param type $referrer
      * @param type $url
      */
@@ -158,8 +158,8 @@ class ConveadTracker {
      * @param type $revenue - общая сумма заказа
      * @param type $order_array массив вида:
       [
-          [id: <product_id>, qnt: <product_count>, price: <product_price>],
-          [...]
+          {product_id: <product_id>, qnt: <product_count>, price: <product_price>},
+          {...}
       ]
      * @return boolean
      */
@@ -189,8 +189,8 @@ class ConveadTracker {
      * 
      * @param array $order_array JSON-структура вида:
       [
-          [id: <product_id>, qnt: <product_count>, price: <product_price>],
-          [...]
+          {product_id: <product_id>, qnt: <product_count>, price: <product_price>},
+          {...}
       ]
      * @return boolean
      */

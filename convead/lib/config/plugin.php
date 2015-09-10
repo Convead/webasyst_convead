@@ -11,8 +11,10 @@ return array(
 	'vendor'=>1027096,
 	'frontend'     => true,
 	'handlers' => array(
-		'convead_update_cart' => 'update_cart',
-		'convead_purchase' => 'purchase',
-		'convead_view_product' => 'view_product'
+    'cart_add' => 'update_cart',
+    'cart_delete' => 'update_cart',
+    'cart_set_quantity' => 'update_cart',
+    'order_action.create' => 'purchase',
+    'frontend_product' => 'view_product'
 	),
 );
