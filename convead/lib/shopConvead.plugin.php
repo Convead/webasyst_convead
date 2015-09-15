@@ -20,8 +20,18 @@ class shopConveadPlugin extends shopPlugin
 	
 	public function purchase($params)
 	{
+		$order_model = new shopOrderModel();
+		$order = $order_model->getById($params['order_id']);
+		$customer = new waContact($order['contact_id']);
+		$this->visitor_info = array(
+				'first_name' => $customer->get('firstname'),
+				'last_name' => $customer->get('lastname'),
+				'phone' => (($phone = $customer->get('phone') and isset($phone[0])) ? $phone[0]['value'] : false),
+				'email' => (($email = $customer->get('email') and isset($email[0])) ? $email[0]['value'] : false)
+			);
+
 		if (!($convead = $this->_include_api())) return false;
-	
+
 		$order_items_model = new shopOrderItemsModel();
 		$items = $order_items_model->getByField('order_id', $params['order_id'], true);
 		$order_array = array();
@@ -31,7 +41,6 @@ class shopConveadPlugin extends shopPlugin
 			$order_array[] = array('product_id' => $product['product_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
 			$total_price = $total_price + ($product['price']*$product['quantity']);
 		}
-
 		$convead->eventOrder($params['order_id'], $total_price, $order_array);
 	}
 
@@ -48,12 +57,8 @@ class shopConveadPlugin extends shopPlugin
 		
 		if (empty($settings['options']['api_key'])) return false;
 
-		$user_id = wa()->getUser()->getId();
-		
-		$js_info_user = '';
-		$js_ready = '';
-		
-		if ($user_id)
+		$js_info_user = '';		
+		if ($user_id = wa()->getUser()->getId())
 		{
 			$js_info_user = "
 			visitor_uid: '{$user_id}',
@@ -68,6 +73,7 @@ class shopConveadPlugin extends shopPlugin
 		
 		$product_model = new shopProductModel();
 		$product = $product_model->getByField('url', waRequest::param('product_url'));
+		$js_ready = '';
 		if ($product)
 		{
 			$js_ready = "
@@ -106,10 +112,8 @@ class shopConveadPlugin extends shopPlugin
 		include_once('vendors/ConveadTracker.php');
 		
 		$auth = new waAuth();
-		
-		if ($auth_info = $auth->isAuth()) $user_id = $auth_info['id'];
 
-		$convead = new ConveadTracker($settings['options']['api_key'], waRequest::server('SERVER_NAME'), waRequest::cookie('convead_guest_uid'), (isset($user_id) ? $user_id : false), (isset($visitor_info) ? $visitor_info : false));
+		$convead = new ConveadTracker($settings['options']['api_key'], waRequest::server('SERVER_NAME'), waRequest::cookie('convead_guest_uid'), (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false), (isset($this->visitor_info) ? $this->visitor_info : false));
 		
 		return $convead;
 	}
