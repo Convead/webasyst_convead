@@ -2,13 +2,13 @@
 
 /*
  *
- * Storequickorder plugin for Webasyst framework.
+ * Convead plugin for Webasyst framework.
  *
- * @name Storequickorder
- * @author EasyIT LLC
- * @link http://easy-it.ru/
- * @copyright Copyright (c) 2014, EasyIT LLC
- * @version    1.3, 2014-10-15
+ * @name Convead
+ * @author Vladimir Savelyev
+ * @link http://convead.ru/
+ * @copyright Copyright (c) 2015, EasyIT LLC
+ * @version    1.0, 2015-09-15
  *
  */
 
