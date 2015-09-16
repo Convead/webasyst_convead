@@ -3,6 +3,12 @@
 class shopConveadPlugin extends shopPlugin
 {
 
+	# emulate cart_set_quantity and cart_add event
+	public function routing($params)
+	{
+		if (!empty($_POST['product_id']) || (!empty($_POST['quantity']) and !empty($_POST['id']))) $this->update_cart();
+	}
+
 	public function update_cart($params)
 	{
 		if (!($convead = $this->_include_api())) return false;
