@@ -1,15 +1,21 @@
-<h1>Настройка Convead</h1>
+<h1>[`Convead settings`]</h1>
 
 <div class="fields form" id="widget_id_form">
     <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
         {$wa->csrf()}
           <div class="field">
-            <div class="name">API key<br/>
+            <div class="name">[`API key`]<br/>
             </div>
             <div class="value">
-				<input type="text" name="shop_convead[options][api_key]" value="{$settings.options.api_key}" />
+                <input type="text" name="shop_convead[options][api_key]" value="{$settings.options.api_key}" />
             </div>
         </div><br>
+
+        {if !$exist_curl }
+            <div style="padding: 20px; background-color: #ffccbf; margin-bottom: 20px;">
+                <i class="icon16 no"></i>[`No Curl`]
+            </div>
+        {/if}
 
         <div class="field">
             <div class="value submit">

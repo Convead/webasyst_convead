@@ -7,6 +7,7 @@ class shopConveadPluginSettingsAction extends waViewAction {
         $plugin = waSystem::getInstance()->getPlugin($plugin_id);
         $settings = $plugin->getSettings();
         $plugin_model = new shopPluginModel();
+        $this->view->assign('exist_curl', function_exists('curl_exec'));
         $this->view->assign('settings', $settings);
     }
 
