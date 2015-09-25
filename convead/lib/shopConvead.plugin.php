@@ -7,7 +7,11 @@ class shopConveadPlugin extends shopPlugin
 	public function routing($params)
 	{
 		$uri = waRequest::server('REQUEST_URI');
-		if (strpos($uri, '/shop/cart/add/') !== false and !empty($_POST['product_id']) or (strpos($uri, '/shop/cart/save/') !== false and !empty($_POST['quantity']) and !empty($_POST['id']))) $this->update_cart();
+		if (
+			(strpos($uri, '/shop/cart/add/') !== false and !empty($_POST['product_id']))
+			or 
+			(strpos($uri, '/shop/cart/save/') !== false and !empty($_POST['quantity']) and !empty($_POST['id']))
+		) $this->update_cart();
 	}
 
 	public function update_cart($params)
