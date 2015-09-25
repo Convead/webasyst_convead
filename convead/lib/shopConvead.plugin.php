@@ -6,7 +6,8 @@ class shopConveadPlugin extends shopPlugin
 	# emulate cart_set_quantity and cart_add event
 	public function routing($params)
 	{
-		if (!empty($_POST['product_id']) || (!empty($_POST['quantity']) and !empty($_POST['id']))) $this->update_cart();
+		$uri = waRequest::server('REQUEST_URI');
+		if (strpos($uri, '/shop/cart/add/') !== false and !empty($_POST['product_id']) or (strpos($uri, '/shop/cart/save/') !== false and !empty($_POST['quantity']) and !empty($_POST['id']))) $this->update_cart();
 	}
 
 	public function update_cart($params)
