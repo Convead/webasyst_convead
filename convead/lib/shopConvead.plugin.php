@@ -4,22 +4,44 @@ class shopConveadPlugin extends shopPlugin
 {
 
 	# emulate cart_set_quantity and cart_add event
-	public function routing($params)
+	public function routing($route = array())
 	{
 		$uri = waRequest::server('REQUEST_URI');
-		if (
-			(strpos($uri, 'add') !== false and !empty($_POST['product_id']))
-			or 
-			(strpos($uri, 'save') !== false and !empty($_POST['quantity']) and !empty($_POST['id']))
-		) $this->update_cart();
+		if (strpos($uri, 'add') !== false and !empty($_POST['product_id'])) $this->update_cart( array('cart_add' => true, 'product_id' => intval($_POST['product_id'])) );
+		if (strpos($uri, 'save') !== false and !empty($_POST['quantity']) and !empty($_POST['id'])) $this->update_cart( array('cart_set_quantity' => true, 'id' => intval($_POST['id']), 'quantity' => intval($_POST['quantity'])) );
 	}
 
-	public function update_cart($params)
+	public function update_cart($params = array())
 	{
-		if (!($convead = $this->_include_api()) or !class_exists(shopCart)) return false;
+		if (!($convead = $this->_include_api()) or !class_exists('shopCart')) return false;
 		
 		$cart = new shopCart();
 		$products_cart_res = $cart->items();
+
+		// fix old cart value
+		if (!empty($params['cart_add']))
+		{
+			$find_id = false;
+			foreach($products_cart_res as $id=>$product)
+			{
+				if ($product['product_id'] == $params['product_id'])
+				{
+					$find_id = $id;
+					break;
+				}
+			}
+			if (!$find_id) return false;
+			else
+			{
+				$products_cart_res[$find_id]['quantity']++;
+			}
+		}
+		if (!empty($params['cart_set_quantity']))
+		{
+			if (isset($products_cart_res[$params['id']])) $products_cart_res[$params['id']]['quantity'] = $params['quantity'];
+		}
+		// / fix old cart value
+
 		$products_cart = array();
 		foreach($products_cart_res as $product)
 		{
@@ -29,7 +51,7 @@ class shopConveadPlugin extends shopPlugin
 		$convead->eventUpdateCart($products_cart);
 	}
 	
-	public function purchase($params)
+	public function purchase($params = array())
 	{
 		$order_model = new shopOrderModel();
 		$order = $order_model->getById($params['order_id']);
@@ -55,7 +77,7 @@ class shopConveadPlugin extends shopPlugin
 		$convead->eventOrder($params['order_id'], $total_price, $order_array);
 	}
 
-	public function view_product($params)
+	public function view_product($params = array())
 	{
 		self::widget();
 	}
