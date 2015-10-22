@@ -84,11 +84,7 @@ class shopConveadPlugin extends shopPlugin
 
   public static function widget()
   {
-		$plugin = wa('shop')->getPlugin('convead');
-
-		$settings = $plugin->getSettings();
-		
-		if (empty($settings['options']['api_key'])) return false;
+		if (!($api_key = self::_get_api_key())) return false;
 
 		$js_info_user = '';		
 		if ($user_id = wa()->getUser()->getId())
@@ -122,7 +118,7 @@ class shopConveadPlugin extends shopPlugin
 		<script>
 		window.ConveadSettings = {
 			$js_info_user
-			app_key: '{$settings['options']['api_key']}',
+			app_key: '{$api_key}',
 			onready: function() {{$js_ready}}
 
 			/* For more information on widget configuration please see:
@@ -130,7 +126,7 @@ class shopConveadPlugin extends shopPlugin
 			*/
 		};
 
-		(function(w,d,c){w[c]=w[c]||function(){(w[c].q=w[c].q||[]).push(arguments)};var ts = (+new Date()/86400000|0)*86400;var s = d.createElement('script');s.type = 'text/javascript';s.async = true;s.src = 'https://tracker.convead.io/widgets/'+ts+'/widget-{$settings['options']['api_key']}.js';var x = d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s, x);})(window,document,'convead');
+		(function(w,d,c){w[c]=w[c]||function(){(w[c].q=w[c].q||[]).push(arguments)};var ts = (+new Date()/86400000|0)*86400;var s = d.createElement('script');s.type = 'text/javascript';s.async = true;s.src = 'https://tracker.convead.io/widgets/'+ts+'/widget-{$api_key}.js';var x = d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s, x);})(window,document,'convead');
 		</script>
 		<!-- /Convead Widget -->";
 		
@@ -139,16 +135,28 @@ class shopConveadPlugin extends shopPlugin
 	
 	private function _include_api()
 	{
-		$settings = $this->getSettings();
-		if (empty($settings['options']['api_key'])) return false;
+		if (!($api_key = self::_get_api_key())) return false;
 
 		include_once('vendors/ConveadTracker.php');
 		
 		$auth = new waAuth();
 
-		$convead = new ConveadTracker($settings['options']['api_key'], waRequest::server('SERVER_NAME'), waRequest::cookie('convead_guest_uid'), (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false), (isset($this->visitor_info) ? $this->visitor_info : false));
+		$convead = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), waRequest::cookie('convead_guest_uid'), (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false), (isset($this->visitor_info) ? $this->visitor_info : false));
 		
 		return $convead;
+	}
+
+	public static function _get_api_key()
+	{
+		$plugin = wa('shop')->getPlugin('convead');
+		$settings = $plugin->getSettings();
+		
+		wa('site');
+		$domain_id = siteHelper::getDomainId();
+
+		if (!empty($settings['options']['domains'][$domain_id]['api_key'])) return $settings['options']['domains'][$domain_id]['api_key'];
+		else if (!empty($settings['options']['api_key'])) return $settings['options']['api_key'];
+		else return false;
 	}
 
 }

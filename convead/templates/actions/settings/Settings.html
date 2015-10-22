@@ -1,15 +1,22 @@
 <h1>[`Convead settings`]</h1>
 
-<div class="fields form" id="widget_id_form">
+<div class="fields form">
     <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
         {$wa->csrf()}
-          <div class="field">
-            <div class="name">[`API key`]<br/>
+
+        {foreach from=$domains item=domain}
+
+            <h3>{$domain['name']}</h3>
+            <div class="field">
+                <div class="name">[`API key`]<br/>
+                </div>
+                <div class="value">
+                    <input type="text" name="shop_convead[options][domains][{$domain['id']}][api_key]" value="{$settings.options.domains[$domain['id']].api_key}" />
+                </div>
             </div>
-            <div class="value">
-                <input type="text" name="shop_convead[options][api_key]" value="{$settings.options.api_key}" />
-            </div>
-        </div><br>
+            <hr />
+
+        {/foreach}
 
         {if !$exist_curl }
             <div style="padding: 20px; background-color: #ffccbf; margin-bottom: 20px;">
