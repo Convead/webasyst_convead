@@ -4,14 +4,14 @@
     <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
         {$wa->csrf()}
 
-        {foreach from=$domains item=domain}
+        {foreach from=$domains item=domain key=id}
 
-            <h3>{$domain['name']}</h3>
+            <h3>{$domain['title']}</h3>
             <div class="field">
                 <div class="name">[`API key`]<br/>
                 </div>
                 <div class="value">
-                    <input type="text" name="shop_convead[options][domains][{$domain['id']}][api_key]" value="{$settings.options.domains[$domain['id']].api_key}" />
+                    <input type="text" name="shop_convead[options][domains][{$id}][api_key]" value="{$settings.options.domains[$id].api_key}" />
                 </div>
             </div>
             <hr />

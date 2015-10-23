@@ -7,8 +7,8 @@ class shopConveadPluginSettingsAction extends waViewAction {
         $plugin = waSystem::getInstance()->getPlugin($plugin_id);
         $settings = $plugin->getSettings();
 
-        $model = new siteDomainModel();
-        $domains = $model->query('SELECT id, name FROM '.$model->getTableName())->fetchAll();
+        wa('site');
+        $domains = siteHelper::getDomains(true);
 
         $this->view->assign('domains', $domains);
         $this->view->assign('exist_curl', function_exists('curl_exec'));
