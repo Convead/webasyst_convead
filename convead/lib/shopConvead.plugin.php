@@ -18,13 +18,17 @@ class shopConveadPlugin extends shopPlugin
 		$cart = new shopCart();
 		$products_cart_res = $cart->items();
 
+		// fix add one variants of product
+		if (!empty($_REQUEST['sku_id'])) $params['product_id'] = $_REQUEST['sku_id'];
+		// / fix add one variants of product
+
 		// fix old cart value
 		if (!empty($params['cart_add']))
 		{
 			$find_id = false;
 			foreach($products_cart_res as $id=>$product)
 			{
-				if ($product['product_id'] == $params['product_id'])
+				if ($product['sku_id'] == $params['product_id'])
 				{
 					$find_id = $id;
 					break;
@@ -45,7 +49,7 @@ class shopConveadPlugin extends shopPlugin
 		$products_cart = array();
 		foreach($products_cart_res as $product)
 		{
-			$products_cart[] = array('product_id' => $product['product']['id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
+			$products_cart[] = array('product_id' => $product['sku_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
 		}
 
 		$convead->eventUpdateCart($products_cart);
@@ -71,7 +75,7 @@ class shopConveadPlugin extends shopPlugin
 		$total_price = 0;
 		foreach($items as $product)
 		{
-			$order_array[] = array('product_id' => $product['product_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
+			$order_array[] = array('product_id' => $product['sku_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
 			$total_price = $total_price + ($product['price']*$product['quantity']);
 		}
 		$convead->eventOrder($params['order_id'], $total_price, $order_array);
