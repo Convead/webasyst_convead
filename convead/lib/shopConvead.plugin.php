@@ -18,17 +18,13 @@ class shopConveadPlugin extends shopPlugin
 		$cart = new shopCart();
 		$products_cart_res = $cart->items();
 
-		// fix add one variants of product
-		if (!empty($_REQUEST['sku_id'])) $params['product_id'] = $_REQUEST['sku_id'];
-		// / fix add one variants of product
-
 		// fix old cart value
 		if (!empty($params['cart_add']))
 		{
 			$find_id = false;
 			foreach($products_cart_res as $id=>$product)
 			{
-				if ($product['sku_id'] == $params['product_id'])
+				if ((empty($_REQUEST['sku_id']) and $product['sku_id'] == $params['product_id']) or (!empty($_REQUEST['sku_id']) and $product['sku_id'] == $_REQUEST['sku_id']))
 				{
 					$find_id = $id;
 					break;
@@ -49,7 +45,10 @@ class shopConveadPlugin extends shopPlugin
 		$products_cart = array();
 		foreach($products_cart_res as $product)
 		{
-			$products_cart[] = array('product_id' => $product['sku_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
+			$product_id = $product['product']['id'];
+			if ($product['sku_id'] != $product['product']['sku_id']) $product_id .= 's'.$product['sku_id'];
+
+			$products_cart[] = array('product_id' => $product_id, 'qnt' => $product['quantity'], 'price' => $product['price']);
 		}
 
 		$convead->eventUpdateCart($products_cart);
@@ -73,9 +72,16 @@ class shopConveadPlugin extends shopPlugin
 		$items = $order_items_model->getByField('order_id', $params['order_id'], true);
 		$order_array = array();
 		$total_price = 0;
+    $sku_model = new shopProductSkusModel();
 		foreach($items as $product)
 		{
-			$order_array[] = array('product_id' => $product['sku_id'], 'qnt' => $product['quantity'], 'price' => $product['price']);
+	    $skus = $sku_model->getDataByProductId($product['product_id']);
+	    $product['product'] = reset($skus);
+
+			$product_id = $product['product_id'];
+			if ($product['sku_id'] != $product['product']['id']) $product_id .= 's'.$product['sku_id'];
+
+			$order_array[] = array('product_id' => $product_id, 'qnt' => $product['quantity'], 'price' => $product['price']);
 			$total_price = $total_price + ($product['price']*$product['quantity']);
 		}
 		$convead->eventOrder($params['order_id'], $total_price, $order_array);
