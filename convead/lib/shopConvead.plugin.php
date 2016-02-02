@@ -59,12 +59,18 @@ class shopConveadPlugin extends shopPlugin
 		$order_model = new shopOrderModel();
 		$order = $order_model->getById($params['order_id']);
 		$customer = new waContact($order['contact_id']);
-		$this->visitor_info = array(
+
+		$fields = array(
 				'first_name' => $customer->get('firstname'),
 				'last_name' => $customer->get('lastname'),
 				'phone' => (($phone = $customer->get('phone') and isset($phone[0])) ? $phone[0]['value'] : false),
 				'email' => (($email = $customer->get('email') and isset($email[0])) ? $email[0]['value'] : false)
 			);
+		$this->visitor_info = array();
+		foreach($fields as $key=>$value)
+		{
+			if ($value) $this->visitor_info[$key] = $value;
+		}
 
 		if (!($convead = $this->_include_api())) return false;
 
@@ -99,13 +105,22 @@ class shopConveadPlugin extends shopPlugin
 		$js_info_user = '';		
 		if ($user_id = wa()->getUser()->getId())
 		{
+			$fields = array(
+					'first_name' => wa()->getUser()->get('firstname', 'default'),
+					'last_name' => wa()->getUser()->get('lastname', 'default'),
+					'phone' => wa()->getUser()->get('phone', 'default'),
+					'email' => wa()->getUser()->get('email', 'default')
+				);
+			$js_visitor_info = array();
+			foreach($fields as $key=>$value)
+			{
+				if ($value) $js_visitor_info[] = $key.": '".str_replace("'", "\'", $value)."'";
+			}
+
 			$js_info_user = "
 			visitor_uid: '{$user_id}',
 			visitor_info: {
-				first_name: '".wa()->getUser()->get('firstname','default')."',
-				last_name: '".wa()->getUser()->get('lastname','default')."',
-				phone: '".wa()->getUser()->get('phone','default')."',
-				email: '".wa()->getUser()->get('email','default')."'
+".implode(",\n", $js_visitor_info)."
 			},
 			";
 		}
