@@ -60,12 +60,25 @@ class shopConveadPlugin extends shopPlugin
 		$order = $order_model->getById($params['order_id']);
 		$customer = new waContact($order['contact_id']);
 
-		$fields = array(
-				'first_name' => $customer->get('firstname'),
-				'last_name' => $customer->get('lastname'),
-				'phone' => (($phone = $customer->get('phone') and isset($phone[0])) ? $phone[0]['value'] : false),
-				'email' => (($email = $customer->get('email') and isset($email[0])) ? $email[0]['value'] : false)
-			);
+		if (isset($_REQUEST['customer_id']))
+		{
+			# create purchase from admin panel without customer
+			$fields = array(
+					'first_name' => (!empty($_REQUEST['customer']['firstname']) ? $_REQUEST['customer']['firstname'] : false),
+					'last_name' => (!empty($_REQUEST['customer']['lastname']) ? $_REQUEST['customer']['lastname'] : false),
+					'phone' => (!empty($_REQUEST['customer']['phone']) ? $_REQUEST['customer']['phone'] : false),
+					'email' => (!empty($_REQUEST['customer']['email']) ? $_REQUEST['customer']['email'] : false)
+				);
+		}
+		else
+		{
+			$fields = array(
+					'first_name' => $customer->get('firstname'),
+					'last_name' => $customer->get('lastname'),
+					'phone' => (($phone = $customer->get('phone') and isset($phone[0])) ? $phone[0]['value'] : false),
+					'email' => (($email = $customer->get('email') and isset($email[0])) ? $email[0]['value'] : false)
+				);
+		}
 		$this->visitor_info = array();
 		foreach($fields as $key=>$value)
 		{
@@ -166,7 +179,19 @@ class shopConveadPlugin extends shopPlugin
 		
 		$auth = new waAuth();
 
-		$convead = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), waRequest::cookie('convead_guest_uid'), (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false), (isset($this->visitor_info) ? $this->visitor_info : false));
+		if (isset($_REQUEST['customer_id']))
+		{
+			# create purchase from admin panel without customer
+			$guest_uid = ($_REQUEST['customer_id'] == 0 ? uniqid() : false);
+			$uid = ($_REQUEST['customer_id'] == 0 ? false : $_REQUEST['customer_id']);
+		}
+		else
+		{
+			$guest_uid = waRequest::cookie('convead_guest_uid');
+			$uid = (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false);
+		}
+
+		$convead = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
 		
 		return $convead;
 	}
