@@ -8,7 +8,7 @@
  * @author Vladimir Savelyev
  * @link http://convead.ru/
  * @copyright Copyright (c) 2015, EasyIT LLC
- * @version    1.4, 2016-01-22
+ * @version    1.5, 2016-02-02
  *
  */
 
