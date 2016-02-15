@@ -11,7 +11,7 @@
                 <div class="name">[`API key`]<br/>
                 </div>
                 <div class="value">
-                    <input type="text" name="shop_convead[options][domains][{$id}][api_key]" value="{$settings.options.domains[$id].api_key}" />
+                    <input type="text" name="shop_convead[options][domains][{$id}][api_key]" value="{if isset($settings.options.domains[$id].api_key)}{$settings.options.domains[$id].api_key}{/if}" />
                 </div>
             </div>
             <hr />
