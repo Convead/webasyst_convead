@@ -4,7 +4,7 @@
  * Класс для работы с сервисом convead.io
  */
 class ConveadTracker {
-    public $version = '1.1.6';
+    public $version = '1.1.7';
 
     private $browser;
     private $api_key;
@@ -331,7 +331,7 @@ class ConveadTracker {
  * Класс для работы с post запросами
  */
 class Browser {
-    public $version = '1.1.2';
+    public $version = '1.1.3';
 
     protected $config = array();
     public $error = false;
@@ -401,6 +401,9 @@ class Browser {
     public function get($url, $post = false) {
         if($this->isUAAbandoned($_SERVER['HTTP_USER_AGENT']))
             return true;
+
+        if(isset($_COOKIE['convead_track_disable']))
+            return 'Convead tracking disabled';
 
         $curl = curl_init($url);
 

@@ -8,7 +8,7 @@
  * @author Vladimir Savelyev
  * @link http://convead.ru/
  * @copyright Copyright (c) 2015, Convead
- * @version    1.6, 2016-02-15
+ * @version    1.7, 2016-03-03
  *
  */
 
