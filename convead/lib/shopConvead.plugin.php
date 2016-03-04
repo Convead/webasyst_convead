@@ -204,7 +204,7 @@ class shopConveadPlugin extends shopPlugin
 		wa('site');
 		foreach (siteHelper::getDomains(true) as $domain_id=>$domain) if (waRequest::server('SERVER_NAME') == $domain['name']) break;
 
-		if (!empty($settings['options']['domains'][$domain_id]['api_key'])) return $settings['options']['domains'][$domain_id]['api_key'];
+		if (isset($settings['options']) and isset($settings['options']['domains']) and !empty($settings['options']['domains'][$domain_id]['api_key'])) return $settings['options']['domains'][$domain_id]['api_key'];
 		else if (!empty($settings['options']['api_key'])) return $settings['options']['api_key'];
 		else return false;
 	}
