@@ -30,8 +30,7 @@ class shopConveadPlugin extends shopPlugin
 					break;
 				}
 			}
-			if (!$find_id) return false;
-			else
+			if ($find_id)
 			{
 				$products_cart_res[$find_id]['quantity']++;
 			}
