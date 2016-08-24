@@ -20,12 +20,13 @@ return array(
         'cart_delete'             => 'update_cart',
         'frontend_product'        => 'view_product',
         'order_action.create'     => 'purchase',
-        'order_action.delete'     => 'order_delete',
-        'order_action.complete'   => 'order_state', // Удален
-        'order_action.callback'   => 'order_state', // Callback от платежной системы
-        'order_action.pay'        => 'order_state', // Оплачен
-        'order_action.process'    => 'order_state', // В обработку
-        'order_action.restore'    => 'order_state', // Восстановить
-        'order_action.ship'       => 'order_state'  // Отправлен
+        'order_action.delete'     => 'order_delete', // Удален 
+        'order_action.complete'   => 'order_state',  // Выполнен "completed"
+        'order_action.callback'   => 'order_state',  // Callback от платежной системы
+        'order_action.pay'        => 'order_state',  // Оплачен "paid"
+        'order_action.process'    => 'order_state',  // В обработке "processing"
+        'order_action.restore'    => 'order_state',  // Восстановлен
+        'order_action.ship'       => 'order_state',  // Отправлен "shipped"
+        'order_action.refund'     => 'order_state'   // Возврат "refunded"
     ),
 );
