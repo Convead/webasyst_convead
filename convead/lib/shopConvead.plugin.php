@@ -3,6 +3,22 @@
 class shopConveadPlugin extends shopPlugin
 {
 
+	public function order_state($params)
+	{
+		if (!($api = $this->_include_api())) return false;
+		if (!$params['order_id']) return false;
+		
+		$api->order_set_state($params['order_id'], $params['after_state_id']);
+	}
+
+	public function order_delete($params)
+	{
+		if (!($api = $this->_include_api())) return false;
+		if (!$params['order_id']) return false;
+
+		$api->order_delete($params['order_id']);
+	}
+
 	# emulate cart_set_quantity and cart_add event
 	public function routing($route = array())
 	{
@@ -13,7 +29,7 @@ class shopConveadPlugin extends shopPlugin
 
 	public function update_cart($params = array())
 	{
-		if (!($convead = $this->_include_api()) or !class_exists('shopCart')) return false;
+		if (!($tracker = $this->_include_tracker()) or !class_exists('shopCart')) return false;
 		
 		$cart = new shopCart();
 		$products_cart_res = $cart->items();
@@ -50,7 +66,7 @@ class shopConveadPlugin extends shopPlugin
 			$products_cart[] = array('product_id' => $product_id, 'qnt' => $product['quantity'], 'price' => $product['price']);
 		}
 
-		$convead->eventUpdateCart($products_cart);
+		$tracker->eventUpdateCart($products_cart);
 	}
 	
 	public function purchase($params = array())
@@ -84,7 +100,7 @@ class shopConveadPlugin extends shopPlugin
 			if ($value) $this->visitor_info[$key] = $value;
 		}
 
-		if (!($convead = $this->_include_api())) return false;
+		if (!($tracker = $this->_include_tracker())) return false;
 
 		$order_items_model = new shopOrderItemsModel();
 		$items = $order_items_model->getByField('order_id', $params['order_id'], true);
@@ -102,7 +118,7 @@ class shopConveadPlugin extends shopPlugin
 			$order_array[] = array('product_id' => $product_id, 'qnt' => $product['quantity'], 'price' => $product['price']);
 			$total_price = $total_price + ($product['price']*$product['quantity']);
 		}
-		$convead->eventOrder($params['order_id'], $total_price, $order_array);
+		$tracker->eventOrder($params['order_id'], $total_price, $order_array);
 	}
 
 	public function view_product($params = array())
@@ -131,9 +147,7 @@ class shopConveadPlugin extends shopPlugin
 
 			$js_info_user = "
 			visitor_uid: '{$user_id}',
-			visitor_info: {
-".implode(",\n", $js_visitor_info)."
-			},
+			visitor_info: {".implode(",\n", $js_visitor_info)."},
 			";
 		}
 		
@@ -155,8 +169,7 @@ class shopConveadPlugin extends shopPlugin
 		<script>
 		window.ConveadSettings = {
 			$js_info_user
-			app_key: '{$api_key}',
-			onready: function() {{$js_ready}}
+			app_key: '{$api_key}'
 
 			/* For more information on widget configuration please see:
 			   http://help.convead.ru/knowledge_base/item/25215
@@ -164,6 +177,8 @@ class shopConveadPlugin extends shopPlugin
 		};
 
 		(function(w,d,c){w[c]=w[c]||function(){(w[c].q=w[c].q||[]).push(arguments)};var ts = (+new Date()/86400000|0)*86400;var s = d.createElement('script');s.type = 'text/javascript';s.async = true;s.src = 'https://tracker.convead.io/widgets/'+ts+'/widget-{$api_key}.js';var x = d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s, x);})(window,document,'convead');
+
+{{$js_ready}}
 		</script>
 		<!-- /Convead Widget -->";
 		
@@ -171,6 +186,17 @@ class shopConveadPlugin extends shopPlugin
   }
 	
 	private function _include_api()
+	{
+		if (!($api_key = self::_get_api_key())) return false;
+
+		include_once('vendors/ConveadTracker.php');
+
+		$api = new ConveadApi($api_key);
+		
+		return $api;
+	}
+
+	private function _include_tracker()
 	{
 		if (!($api_key = self::_get_api_key())) return false;
 
@@ -190,9 +216,9 @@ class shopConveadPlugin extends shopPlugin
 			$uid = (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false);
 		}
 
-		$convead = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
+		$tracker = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
 		
-		return $convead;
+		return $tracker;
 	}
 
 	public static function _get_api_key()

@@ -1,24 +1,31 @@
 <?php
 
 return array(
-    'name' => 'Convead',
-    'img'=>'img/logo.png',
-    'icons'=>array(
+    'name'          => 'Convead',
+    'img'           => 'img/logo.png',
+    'icons'         => array(
         16 => 'img/logo.png'
     ),
     'shop_settings' => true,
-    'version' => '1.7',
-    'vendor' => 1027096,
-    'frontend' => true,
-    'handlers' => array(
+    'version'       => '1.7',
+    'vendor'        => 1027096,
+    'frontend'      => true,
+    'handlers'      => array(
         
-        // emulate cart_set_quantity and cart_add event
-        'routing' => 'routing',
-        'cart_add' => 'update_cart',
-        //'cart_set_quantity' => 'update_cart',
+        // Эмуляция эвентов cart_set_quantity и cart_add
+        'routing'                 => 'routing',
+        'cart_add'                => 'update_cart',
+        //'cart_set_quantity'     => 'update_cart',
 
-        'cart_delete' => 'update_cart',
-        'order_action.create' => 'purchase',
-        'frontend_product' => 'view_product'
+        'cart_delete'             => 'update_cart',
+        'frontend_product'        => 'view_product',
+        'order_action.create'     => 'purchase',
+        'order_action.delete'     => 'order_delete',
+        'order_action.complete'   => 'order_state', // Удален
+        'order_action.callback'   => 'order_state', // Callback от платежной системы
+        'order_action.pay'        => 'order_state', // Оплачен
+        'order_action.process'    => 'order_state', // В обработку
+        'order_action.restore'    => 'order_state', // Восстановить
+        'order_action.ship'       => 'order_state'  // Отправлен
     ),
 );

@@ -4,19 +4,18 @@
  * Класс для работы с сервисом convead.io
  */
 class ConveadTracker {
-    public $version = '1.1.7';
+    public $version = '1.2.1';
 
     private $browser;
     private $api_key;
-    private $guest_uid;
+    private $guest_uid = false;
     private $visitor_info = false;
     private $visitor_uid = false;
     private $referrer = false;
     private $api_page = "https://tracker.convead.io/watch/event";
     private $url = false;
     private $domain = false;
-    private $charset = 'utf-8';
-    private $debug = false;
+    public $charset = 'utf-8';
 
     /**
      * 
@@ -40,8 +39,8 @@ class ConveadTracker {
      * @param type $referrer
      * @param type $url
      */
-    public function __construct($api_key, $domain, $guest_uid, $visitor_uid = false, $visitor_info = false, $referrer = false, $url = false) {
-        $this->browser = new Browser();
+    public function __construct($api_key, $domain, $guest_uid = false, $visitor_uid = false, $visitor_info = false, $referrer = false, $url = false) {
+        $this->browser = new ConveadBrowser();
         $this->api_key = (string) $api_key;
         
         $domain_encoding = mb_detect_encoding($domain, array('UTF-8', 'windows-1251'));
@@ -59,15 +58,9 @@ class ConveadTracker {
         $post["app_key"] = $this->api_key;
         $post["domain"] = $this->domain;
 
-        if ($this->guest_uid)
-            $post["guest_uid"] = $this->guest_uid;
-        else
-            $post["guest_uid"] = "";
+        if ($this->guest_uid) $post["guest_uid"] = $this->guest_uid;
 
-        if ($this->visitor_uid)
-            $post["visitor_uid"] = $this->visitor_uid;
-        else
-            $post["visitor_uid"] = "";
+        if ($this->visitor_uid) $post["visitor_uid"] = $this->visitor_uid;
 
         if ($this->referrer) $post["referrer"] = $this->referrer;
         if (is_array($this->visitor_info) and count($this->visitor_info) > 0) $post["visitor_info"] = $this->visitor_info;
@@ -90,12 +83,9 @@ class ConveadTracker {
         $post["properties"]["product_id"] = (string) $product_id;
         if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
         if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
+        
         $post = $this->post_encode($post);
-        $this->putLog($post);
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -117,11 +107,7 @@ class ConveadTracker {
         if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
 
         $post = $this->post_encode($post);
-        $this->putLog($post);
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -141,11 +127,7 @@ class ConveadTracker {
         if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
 
         $post = $this->post_encode($post);
-        $this->putLog($post);
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -165,7 +147,9 @@ class ConveadTracker {
         $properties = array();
         $properties["order_id"] = (string) $order_id;
 
-        if ($revenue) $properties["revenue"] = $revenue;
+        if ($revenue == false) return false;
+        else $properties["revenue"] = $revenue;
+
         if (is_array($order_array)) $properties["items"] = $order_array;
 
         $post["properties"] = $properties;
@@ -173,12 +157,8 @@ class ConveadTracker {
         unset($post["host"]);
         unset($post["path"]);
         $post = $this->post_encode($post);
-        $this->putLog($post);
 
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -200,12 +180,8 @@ class ConveadTracker {
         $post["properties"] = $properties;
 
         $post = $this->post_encode($post);
-        $this->putLog($post);
 
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -221,12 +197,8 @@ class ConveadTracker {
         $post["properties"] = $properties;
 
         $post = $this->post_encode($post);
-        $this->putLog($post);
 
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -237,11 +209,8 @@ class ConveadTracker {
         $post = $this->getDefaultPost();
         $post["type"] = "update_info";
         $post = $this->post_encode($post);
-        $this->putLog($post);
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+
+        return $this->browser->get($this->api_page, $post);
     }
 
     /**
@@ -260,37 +229,15 @@ class ConveadTracker {
 
         $post = $this->post_encode($post);
 
-        $this->putLog($post);
-
-        if ($this->browser->get($this->api_page, $post) === true)
-            return true;
-        else
-            return $this->browser->error;
+        return $this->browser->get($this->api_page, $post);
     }
 
-    private function putLog($message) {
-        if (!$this->debug) return true;
-        $message = date("Y.m.d H:i:s") . " - " . $message . "\n";
-        $filename = dirname(__FILE__) . "/debug.log";
-        file_put_contents($filename, $message, FILE_APPEND);
-    }
-
-    private function post_encode($post) {
-        $ret_post = array(
-            'app_key' => $post['app_key'],
-            'visitor_uid' => $post['visitor_uid'],
-            'guest_uid' => $post['guest_uid'],
-            'data' => $this->json_encode($post)
-          );
-        return $this->build_http_query($ret_post);
-    }
-  
-    private function build_http_query($query) {
-        $query_array = array();
-        foreach( $query as $key => $key_value ){
-            $query_array[] = urlencode( $key ) . '=' . urlencode( $key_value );
-        }
-        return implode('&', $query_array);
+    private function post_encode($post) { 
+        $ret = array('app_key' => $post['app_key']);
+        if ($post['visitor_uid']) $ret['visitor_uid'] = $post['visitor_uid'];
+        if ($post['guest_uid']) $ret['guest_uid'] = $post['guest_uid'];
+        $ret['data'] = $this->json_encode($post);
+        return $ret;
     }
 
     private function json_encode($text) {
@@ -327,93 +274,83 @@ class ConveadTracker {
 }
 
 
+class ConveadApi {
+    public $version = '1.1.1';
+    private $api_key;
+    private $api_page = "https://tracker.convead.io/";
+
+    /**
+     * 
+     * @param type $api_key
+     */
+    public function __construct($api_key) {
+        $this->browser = new ConveadBrowser();
+        $this->api_key = (string) $api_key;
+    }
+
+    public function order_delete($order_id) {
+        $this->method = 'DELETE';
+        $url = "{$this->api_page}api/v1/accounts/{$this->api_key}/orders/{$order_id}";
+        return $this->browser->get($url);
+    }
+
+    public function order_set_state($order_id, $state) {
+        $url = "{$this->api_page}api/v1/accounts/{$this->api_key}/orders/{$order_id}";
+        $post = array(
+            'state' => $state
+        );
+        return $this->browser->get($url, $post);
+    }
+
+}
+
+
 /**
  * Класс для работы с post запросами
  */
-class Browser {
-    public $version = '1.1.3';
+class ConveadBrowser {
+    public $version = '1.1.4';
 
-    protected $config = array();
+    public $debug = false;
+    public $timeout = 500;
+    public $method = 'POST';
     public $error = false;
 
     public function __initialize() {
-        $this->resetConfig();
-    }
-
-    public function setopt($const, $val) {
-        $this->settings[$const] = $val;
-    }
-
-    public function resetConfig() {
-        $this->referer = false;
-        $this->useragent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:32.0) Gecko/20100101 Firefox/32.0";
-        $this->cookie = false;
-        $this->userpwd = false;
-
-        $this->timeout = 5;
-
-        $this->proxy = false;
-        $this->proxyuserpwd = false;
-
-        $this->followlocation = false;
-        $this->maxsize = 0;
-        $this->maxredirs = 5;
-
-        $this->encode = false;
-
-        $this->settings = array();
-    }
-
-    public function postToString($post) {
-        $result = "";
-        $i = 0;
-        foreach ($post as $varname => $varval) {
-            $result .= ($i > 0 ? "&" : "") . urlencode($varname) . "=" . urlencode($varval);
-            $i++;
-        }
-
-        return $result;
-    }
-
-    public function postEncode($post) {
-        $result = array();
-        foreach ($post as $varname => $varval) {
-            $result[urlencode($varname)] = urlencode($varval);
-        }
-
-        return $result;
     }
 
     public function isUAAbandoned($user_agent){
-        if(!$user_agent)
-            return true;
+        if(!$user_agent) return true;
+
         $re = "/bot|crawl(er|ing)|google|yandex|rambler|yahoo|bingpreview|alexa|facebookexternalhit|bitrix/i"; 
         
         $matches = array(); 
         preg_match($re, $user_agent, $matches);
 
-        if(count($matches) > 0)
-            return true;
-        else
-            return false;
+        return (count($matches) > 0);
     }
 
     public function get($url, $post = false) {
-        if($this->isUAAbandoned($_SERVER['HTTP_USER_AGENT']))
+        $this->putLog($url, $post);
+
+        if ($this->isUAAbandoned($_SERVER['HTTP_USER_AGENT']))
             return true;
 
-        if(isset($_COOKIE['convead_track_disable']))
+        if (isset($_COOKIE['convead_track_disable']))
             return 'Convead tracking disabled';
 
         $curl = curl_init($url);
 
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
         curl_setopt($curl, CURLOPT_FAILONERROR, true);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+
+        if ($this->method != 'POST') curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $this->method);
         
         if ($post) {
-            curl_setopt($curl, CURLOPT_POST, 1);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
+            if ($this->method == 'POST') curl_setopt($curl, CURLOPT_POST, 1);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $this->build_http_query($post));
 
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         } else {
@@ -426,14 +363,31 @@ class Browser {
 
         $this->error = curl_error($curl);
 
-        if ($this->error) {
-
-            return $this->error;
-        }
+        if ($this->error) return $this->error;
 
         curl_close($curl);
 
         return true;
+    }
+  
+    private function build_http_query($query) {
+        $query_array = array();
+        foreach( $query as $key => $key_value ){
+            $query_array[] = urlencode( $key ) . '=' . urlencode( $key_value );
+        }
+        return implode('&', $query_array);
+    }
+
+    private function putLog($url, $post) {
+        if (!$this->debug) return true;
+
+        ob_start();
+        print_r($post);
+        $string = ob_get_clean();
+
+        $row = date("Y.m.d H:i:s") . "\n" . $url . "\n" . $string . "\n\n";
+        $filename = dirname(__FILE__) . "/debug.log";
+        file_put_contents($filename, $row, FILE_APPEND);
     }
 
 }
