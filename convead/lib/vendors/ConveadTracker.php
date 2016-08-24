@@ -312,7 +312,8 @@ class ConveadBrowser {
     public $version = '1.1.4';
 
     public $debug = false;
-    public $timeout = 500;
+    public $timeout = 1;
+    public $connect_timeout = 1;
     public $method = 'POST';
     public $error = false;
 
@@ -342,6 +343,7 @@ class ConveadBrowser {
         $curl = curl_init($url);
 
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connect_timeout);
         curl_setopt($curl, CURLOPT_FAILONERROR, true);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
