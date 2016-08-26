@@ -63,7 +63,12 @@ class shopConveadPlugin extends shopPlugin
 			$product_id = $product['product']['id'];
 			if ($product['sku_id'] != $product['product']['sku_id']) $product_id .= 's'.$product['sku_id'];
 
-			$products_cart[] = array('product_id' => $product_id, 'qnt' => $product['quantity'], 'price' => $product['price']);
+			$products_cart[] = array(
+				'product_id' => $product_id, 
+				'qnt' => $product['quantity'], 
+				'price' => $product['price'],
+				'product_name' => $product['name']
+			);
 		}
 
 		$tracker->eventUpdateCart($products_cart);
@@ -115,7 +120,12 @@ class shopConveadPlugin extends shopPlugin
 			$product_id = $product['product_id'];
 			if ($product['sku_id'] != $product['product']['id']) $product_id .= 's'.$product['sku_id'];
 
-			$order_array[] = array('product_id' => $product_id, 'qnt' => $product['quantity'], 'price' => $product['price']);
+			$order_array[] = array(
+				'product_id' => $product_id,
+				'qnt' => $product['quantity'],
+				'price' => $product['price'],
+				'product_name' => $product['name']
+			);
 			$total_price = $total_price + ($product['price']*$product['quantity']);
 		}
 		$tracker->eventOrder($params['order_id'], $total_price, $order_array);
