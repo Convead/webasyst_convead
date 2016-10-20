@@ -51,6 +51,8 @@ class ConveadTracker {
         $this->visitor_uid = (string) $visitor_uid;
         $this->referrer = (string) $referrer;
         $this->url = (string) $url;
+        
+        if (!$this->guest_uid and !$this->visitor_uid) $this->guest_uid = uniqid();
     }
 
     private function getDefaultPost() {
@@ -147,8 +149,7 @@ class ConveadTracker {
         $properties = array();
         $properties["order_id"] = (string) $order_id;
 
-        if ($revenue == false) return false;
-        else $properties["revenue"] = $revenue;
+        if ($revenue !== false) $properties["revenue"] = $revenue;
 
         if (is_array($order_array)) $properties["items"] = $order_array;
 
@@ -234,8 +235,8 @@ class ConveadTracker {
 
     private function post_encode($post) { 
         $ret = array('app_key' => $post['app_key']);
-        if ($post['visitor_uid']) $ret['visitor_uid'] = $post['visitor_uid'];
-        if ($post['guest_uid']) $ret['guest_uid'] = $post['guest_uid'];
+        if (!empty($post['visitor_uid'])) $ret['visitor_uid'] = $post['visitor_uid'];
+        if (!empty($post['guest_uid'])) $ret['guest_uid'] = $post['guest_uid'];
         $ret['data'] = $this->json_encode($post);
         return $ret;
     }
@@ -288,13 +289,13 @@ class ConveadApi {
         $this->api_key = (string) $api_key;
     }
 
-    public function order_delete($order_id) {
+    public function orderDelete($order_id) {
         $this->browser->method = 'DELETE';
         $url = "{$this->api_page}api/v1/accounts/{$this->api_key}/orders/{$order_id}";
         return $this->browser->get($url);
     }
 
-    public function order_set_state($order_id, $state) {
+    public function orderSetState($order_id, $state) {
         $url = "{$this->api_page}api/v1/accounts/{$this->api_key}/orders/{$order_id}";
         $post = array(
             'state' => $state
@@ -321,30 +322,16 @@ class ConveadBrowser {
     public function __initialize() {
     }
 
-    public function isUAAbandoned($user_agent){
-        if(!$user_agent) return true;
-
-        $re = "/bot|crawl(er|ing)|google|yandex|rambler|yahoo|bingpreview|alexa|facebookexternalhit|bitrix/i"; 
-        
-        $matches = array(); 
-        preg_match($re, $user_agent, $matches);
-
-        return (count($matches) > 0);
-    }
-
     public function get($url, $post = false) {
         $this->put_log($url, $post);
-
-        if ($this->isUAAbandoned($_SERVER['HTTP_USER_AGENT']))
-            return true;
 
         if (isset($_COOKIE['convead_track_disable']))
             return 'Convead tracking disabled';
 
         $curl = curl_init($url);
 
-        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connect_timeout);
+        curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->connect_timeout);
         curl_setopt($curl, CURLOPT_FAILONERROR, true);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
