@@ -8,7 +8,7 @@ class shopConveadPlugin extends shopPlugin
 		if (!($api = $this->_include_api())) return false;
 		if (!$params['order_id']) return false;
 		
-		$api->order_set_state($params['order_id'], $params['after_state_id']);
+		$api->orderSetState($params['order_id'], $params['after_state_id']);
 	}
 
 	public function order_delete($params)
@@ -16,7 +16,7 @@ class shopConveadPlugin extends shopPlugin
 		if (!($api = $this->_include_api())) return false;
 		if (!$params['order_id']) return false;
 
-		$api->order_delete($params['order_id']);
+		$api->orderDelete($params['order_id']);
 	}
 
 	# emulate cart_set_quantity and cart_add event
