@@ -13,4 +13,4 @@
  */
 
 $app_settings_model = new waAppSettingsModel();
-$app_settings_model->set(array('shop', 'convead'), 'options', '{domains:[]}');
+$app_settings_model->set(array('shop', 'convead'), 'options', '{domains:[],api_token:""}');

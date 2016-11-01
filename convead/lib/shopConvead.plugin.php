@@ -5,21 +5,27 @@ class shopConveadPlugin extends shopPlugin
 
 	public function order_state($params)
 	{
-		if (!($api = $this->_include_api())) return false;
 		if (!$params['order_id']) return false;
+		if (!($api = $this->_include_api())) return false;
 		
-		$api->orderSetState($params['order_id'], $params['after_state_id']);
+		$order_id = $params['order_id'];
+		$order_data = $this->_getOrderData($order_id);
+		$revenue = $order_data ? $order_data->revenue : null;
+		$items = $order_data ? $order_data->items : null;
+		$state = $this->_switchState($params['after_state_id']);
+
+		$api->orderUpdate($order_id, $state, $revenue, $items);
 	}
 
 	public function order_delete($params)
 	{
-		if (!($api = $this->_include_api())) return false;
 		if (!$params['order_id']) return false;
+		if (!($api = $this->_include_api())) return false;
 
-		$api->orderDelete($params['order_id']);
+		$api->orderUpdate($params['order_id'], 'cancelled');
 	}
 
-	# emulate cart_set_quantity and cart_add event
+	// emulate cart_set_quantity and cart_add event
 	public function routing($route = array())
 	{
 		$uri = waRequest::server('REQUEST_URI');
@@ -82,7 +88,7 @@ class shopConveadPlugin extends shopPlugin
 
 		if (isset($_REQUEST['customer_id']))
 		{
-			# create purchase from admin panel without customer
+			// create purchase from admin panel without customer
 			$fields = array(
 					'first_name' => (!empty($_REQUEST['customer']['firstname']) ? $_REQUEST['customer']['firstname'] : false),
 					'last_name' => (!empty($_REQUEST['customer']['lastname']) ? $_REQUEST['customer']['lastname'] : false),
@@ -106,29 +112,10 @@ class shopConveadPlugin extends shopPlugin
 		}
 
 		if (!($tracker = $this->_include_tracker())) return false;
-
-		$order_items_model = new shopOrderItemsModel();
-		$items = $order_items_model->getByField('order_id', $params['order_id'], true);
-		$order_array = array();
-		$total_price = 0;
-    $sku_model = new shopProductSkusModel();
-		foreach($items as $product)
-		{
-	    $skus = $sku_model->getDataByProductId($product['product_id']);
-	    $product['product'] = reset($skus);
-
-			$product_id = $product['product_id'];
-			if ($product['sku_id'] != $product['product']['id']) $product_id .= 's'.$product['sku_id'];
-
-			$order_array[] = array(
-				'product_id' => $product_id,
-				'qnt' => $product['quantity'],
-				'price' => $product['price'],
-				'product_name' => $product['name']
-			);
-			$total_price = $total_price + ($product['price']*$product['quantity']);
-		}
-		$tracker->eventOrder($params['order_id'], $total_price, $order_array);
+		
+		if (!($order_data = $this->_getOrderData($params['order_id']))) return false;
+		
+		return $tracker->eventOrder($order_data->order_id, $order_data->revenue, $order_data->items);
 	}
 
 	public function view_product($params = array())
@@ -138,7 +125,7 @@ class shopConveadPlugin extends shopPlugin
 
   public static function widget()
   {
-		if (!($api_key = self::_get_api_key())) return false;
+		if (!($api_key = self::_get_app_key())) return false;
 
 		$js_info_user = '';		
 		if ($user_id = wa()->getUser()->getId())
@@ -194,21 +181,65 @@ class shopConveadPlugin extends shopPlugin
 		
 		return $ret;
   }
+
+  private function _getOrderData($order_id) {
+  	if (!$order_id) return false;
+ 		$order_items_model = new shopOrderItemsModel();
+		$items_res = $order_items_model->getByField('order_id', $order_id, true);
+		$items = array();
+		$total_price = 0;
+    $sku_model = new shopProductSkusModel();
+    $ret = new stdClass();
+		foreach($items_res as $product)
+		{
+	    $skus = $sku_model->getDataByProductId($product['product_id']);
+	    $product['product'] = reset($skus);
+
+			$product_id = $product['product_id'];
+			if ($product['sku_id'] != $product['product']['id']) $product_id .= 's'.$product['sku_id'];
+
+			$items[] = array(
+				'product_id' => $product_id,
+				'qnt' => $product['quantity'],
+				'price' => $product['price'],
+				'product_name' => $product['name']
+			);
+			$total_price = $total_price + ($product['price']*$product['quantity']);
+		}
+		$ret->order_id = $order_id;
+		$ret->items = $items;
+		$ret->revenue = $total_price;
+		return $ret;
+  }
+
+  private function _switchState($state) {
+    switch ($state) {
+      case 'processing':
+        $state = 'new';
+        break;
+      case 'paid':
+        $state = 'paid';
+        break;
+      case 'shipped':
+        $state = 'shipped';
+        break;
+    }
+    return $state;
+  }
 	
 	private function _include_api()
 	{
-		if (!($api_key = self::_get_api_key())) return false;
+		if (!($api_token = self::_get_api_token())) return false;
+		if (!($app_key = $this->_get_app_key())) return false;
 
-		include_once('vendors/ConveadTracker.php');
-
-		$api = new ConveadApi($api_key);
+		$api = new ConveadApi($api_token, $app_key);
 		
 		return $api;
 	}
 
 	private function _include_tracker()
 	{
-		if (!($api_key = self::_get_api_key())) return false;
+		if (!($api_key = self::_get_app_key())) return false;
 
 		include_once('vendors/ConveadTracker.php');
 		
@@ -216,7 +247,7 @@ class shopConveadPlugin extends shopPlugin
 
 		if (isset($_REQUEST['customer_id']))
 		{
-			# create purchase from admin panel without customer
+			// create purchase from admin panel without customer
 			$guest_uid = ($_REQUEST['customer_id'] == 0 ? uniqid() : false);
 			$uid = ($_REQUEST['customer_id'] == 0 ? false : $_REQUEST['customer_id']);
 		}
@@ -231,14 +262,23 @@ class shopConveadPlugin extends shopPlugin
 		return $tracker;
 	}
 
-	public static function _get_api_key()
+	public static function _get_api_token()
+	{
+		$plugin = wa('shop')->getPlugin('convead');
+		$settings = $plugin->getSettings();
+
+		include_once('vendors/ConveadApi.php');
+
+		return (isset($settings['options']) and !empty($settings['options']['api_token'])) ? $settings['options']['api_token'] : false;
+	}
+
+	public static function _get_app_key()
 	{
 		$plugin = wa('shop')->getPlugin('convead');
 		$settings = $plugin->getSettings();
 		
 		wa('site');
 		foreach (siteHelper::getDomains(true) as $domain_id=>$domain) if (waRequest::server('SERVER_NAME') == $domain['name']) break;
-
 		if (isset($settings['options']) and isset($settings['options']['domains']) and !empty($settings['options']['domains'][$domain_id]['api_key'])) return $settings['options']['domains'][$domain_id]['api_key'];
 		else if (!empty($settings['options']['api_key'])) return $settings['options']['api_key'];
 		else return false;
