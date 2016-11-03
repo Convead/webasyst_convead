@@ -9,7 +9,8 @@ class shopConveadPlugin extends shopPlugin
 		if (!($api = $this->_include_api())) return false;
 		
 		$order_id = $params['order_id'];
-		$order_data = $this->_getOrderData($order_id);
+		if (!($order_data = $this->_getOrderData($order_id))) return false;
+
 		$revenue = $order_data ? $order_data->revenue : null;
 		$items = $order_data ? $order_data->items : null;
 		$state = $this->_switchState($params['after_state_id']);
@@ -82,9 +83,9 @@ class shopConveadPlugin extends shopPlugin
 	
 	public function purchase($params = array())
 	{
-		$order_model = new shopOrderModel();
-		$order = $order_model->getById($params['order_id']);
-		$customer = new waContact($order['contact_id']);
+		if (!($order_data = $this->_getOrderData($params['order_id']))) return false;
+
+		$customer = new waContact($order_data->order['contact_id']);
 
 		if (isset($_REQUEST['customer_id']))
 		{
@@ -113,9 +114,7 @@ class shopConveadPlugin extends shopPlugin
 
 		if (!($tracker = $this->_include_tracker())) return false;
 		
-		if (!($order_data = $this->_getOrderData($params['order_id']))) return false;
-		
-		return $tracker->eventOrder($order_data->order_id, $order_data->revenue, $order_data->items);
+		return $tracker->eventOrder($order_data->order_id, $order_data->revenue, $order_data->items, $order_data->state);
 	}
 
 	public function view_product($params = array())
@@ -183,7 +182,11 @@ class shopConveadPlugin extends shopPlugin
   }
 
   private function _getOrderData($order_id) {
-  	if (!$order_id) return false;
+  	$order_model = new shopOrderModel();
+  	$order = $order_model->getById($order_id);
+
+  	if (!$order) return false;
+
  		$order_items_model = new shopOrderItemsModel();
 		$items_res = $order_items_model->getByField('order_id', $order_id, true);
 		$items = array();
@@ -209,6 +212,8 @@ class shopConveadPlugin extends shopPlugin
 		$ret->order_id = $order_id;
 		$ret->items = $items;
 		$ret->revenue = $total_price;
+		$ret->state = $this->_switchState($order['state_id']);
+		$ret->order = $order;
 		return $ret;
   }
 
