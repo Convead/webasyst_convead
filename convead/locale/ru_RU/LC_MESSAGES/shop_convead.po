@@ -25,6 +25,3 @@ msgstr "На хостинге не установлено расширение C
 
 msgid "API key"
 msgstr "APP KEY аккаунта Convead"
-
-msgid "API token"
-msgstr "API TOKEN вашего пользователя Convead"

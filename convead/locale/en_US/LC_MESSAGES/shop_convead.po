@@ -25,6 +25,3 @@ msgstr "On the hosting is not installed Curl extension"
 
 msgid "API key"
 msgstr "APP KEY convead account"
-
-msgid "API token"
-msgstr "API TOKEN convead user Convead"

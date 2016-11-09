@@ -6,7 +6,7 @@ class shopConveadPlugin extends shopPlugin
 	public function order_state($params)
 	{
 		if (!$params['order_id']) return false;
-		if (!($api = $this->_include_api())) return false;
+		if (!($tracker = $this->_include_tracker_anonym())) return false;
 		
 		$order_id = $params['order_id'];
 		if (!($order_data = $this->_getOrderData($order_id))) return false;
@@ -15,15 +15,15 @@ class shopConveadPlugin extends shopPlugin
 		$items = $order_data ? $order_data->items : null;
 		$state = $this->_switchState($params['after_state_id']);
 
-		$api->orderUpdate($order_id, $state, $revenue, $items);
+		$tracker->webHookOrderUpdate($order_id, $state, $revenue, $items);
 	}
 
 	public function order_delete($params)
 	{
 		if (!$params['order_id']) return false;
-		if (!($api = $this->_include_api())) return false;
+		if (!($tracker = $this->_include_tracker_anonym())) return false;
 
-		$api->orderUpdate($params['order_id'], 'cancelled');
+		$tracker->webHookOrderUpdate($params['order_id'], 'cancelled');
 	}
 
 	// emulate cart_set_quantity and cart_add event
@@ -242,6 +242,17 @@ class shopConveadPlugin extends shopPlugin
 		return $api;
 	}
 
+	private function _include_tracker_anonym()
+	{
+    if (!($api_key = self::_get_app_key())) return false;
+
+    include_once('vendors/ConveadTracker.php');
+
+    $tracker = new ConveadTracker($api_key);
+
+    return $tracker;
+	}
+
 	private function _include_tracker()
 	{
 		if (!($api_key = self::_get_app_key())) return false;
@@ -265,16 +276,6 @@ class shopConveadPlugin extends shopPlugin
 		$tracker = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
 		
 		return $tracker;
-	}
-
-	public static function _get_api_token()
-	{
-		$plugin = wa('shop')->getPlugin('convead');
-		$settings = $plugin->getSettings();
-
-		include_once('vendors/ConveadApi.php');
-
-		return (isset($settings['options']) and !empty($settings['options']['api_token'])) ? $settings['options']['api_token'] : false;
 	}
 
 	public static function _get_app_key()

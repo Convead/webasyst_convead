@@ -4,15 +4,6 @@
   <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
     {$wa->csrf()}
 
-    <div class="field">
-      <div class="name">[`API token`]<br/>
-      </div>
-      <div class="value">
-        <input type="text" name="shop_convead[options][api_token]" value="{if isset($settings.options) and isset($settings.options.api_token)}{$settings.options.api_token}{/if}" />
-      </div>
-    </div>
-    <hr />
-
     {foreach from=$domains item=domain key=id}
 
       <h3>{$domain['title']}</h3>

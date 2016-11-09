@@ -20,6 +20,7 @@ class ConveadTracker {
   private $protocol = "https";
   private $url = false;
   private $domain = false;
+  private $generated_uid = false;
 
   /**
    * 
@@ -43,8 +44,10 @@ class ConveadTracker {
    * @param type $referrer
    * @param type $url
    */
-  public function __construct($api_key, $domain, $guest_uid = false, $visitor_uid = false, $visitor_info = false, $referrer = false, $url = false) {
+  public function __construct($api_key, $domain = false, $guest_uid = false, $visitor_uid = false, $visitor_info = false, $referrer = false, $url = false) {
     $this->api_key = (string) $api_key;
+
+    $domain = ($domain == false) ? $_SERVER['HTTP_HOST'] : $domain;
     
     $domain_encoding = mb_detect_encoding($domain, array('UTF-8', 'windows-1251'));
     $this->domain = (string) mb_strtolower( (($domain_encoding == 'UTF-8') ? $domain : iconv($domain_encoding, 'UTF-8', $domain)) , 'UTF-8');
@@ -55,24 +58,29 @@ class ConveadTracker {
     $this->referrer = (string) $referrer;
     $this->url = (string) $url;
     
-    if (!$this->guest_uid and !$this->visitor_uid) $this->guest_uid = uniqid();
+    if (!$this->guest_uid and !$this->visitor_uid) {
+      $this->guest_uid = uniqid();
+      $this->generated_uid = true;
+    }
   }
 
   private function getDefaultPost() {
     $post = array();
     $post["app_key"] = $this->api_key;
-    $post["domain"] = $this->domain;
 
     if ($this->guest_uid) $post["guest_uid"] = $this->guest_uid;
-
     if ($this->visitor_uid) $post["visitor_uid"] = $this->visitor_uid;
-
+    
+    $post["domain"] = $this->domain;
+    
     if ($this->referrer) $post["referrer"] = $this->referrer;
-    if (is_array($this->visitor_info) and count($this->visitor_info) > 0) $post["visitor_info"] = $this->visitor_info;
     if ($this->url) {
-        $post["url"] = "http://" . $this->url;
-        $post["host"] = $this->url;
+      $post["url"] = "http://" . $this->url;
+      $post["host"] = $this->url;
     }
+
+    if (is_array($this->visitor_info) and count($this->visitor_info) > 0) $post["visitor_info"] = $this->visitor_info;
+
     return $post;
   }
 
@@ -89,6 +97,7 @@ class ConveadTracker {
     if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
     
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -110,6 +119,7 @@ class ConveadTracker {
     if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
 
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -129,6 +139,39 @@ class ConveadTracker {
     if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
 
+    $post = $this->post_encode($post);
+    return $this->send($this->getUrl(), $post);
+  }
+
+  /**
+   * 
+   * @param type $order_id - ID заказа в интернет-магазине
+   * @param type $state - статус заказа
+   * @param type $revenue - общая сумма заказа
+   * @param type $order_array массив вида:
+    [
+        {product_id: <product_id>, qnt: <product_count>, price: <product_price>},
+        {...}
+    ]
+   * @return boolean
+   */
+  public function eventOrderUpdate($order_id, $state, $revenue = false, $order_array = false) {
+    $post = $this->getDefaultPost();
+    $post["type"] = "order_update";
+    $properties = array();
+    $properties["order_id"] = (string) $order_id;
+    $properties["state"] = (string) $state;
+
+    if ($revenue !== false) $properties["revenue"] = $revenue;
+
+    if (is_array($order_array)) $properties["items"] = $order_array;
+
+    $post["properties"] = $properties;
+    unset($post["url"]);
+    unset($post["host"]);
+    unset($post["path"]);
+
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -141,6 +184,7 @@ class ConveadTracker {
         {product_id: <product_id>, qnt: <product_count>, price: <product_price>},
         {...}
     ]
+   * @param type $state - статус заказа
    * @return boolean
    */
   public function eventOrder($order_id, $revenue = false, $order_array = false, $state = false) {
@@ -160,6 +204,7 @@ class ConveadTracker {
     unset($post["host"]);
     unset($post["path"]);
 
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -176,11 +221,9 @@ class ConveadTracker {
     $post = $this->getDefaultPost();
     $post["type"] = "update_cart";
     $properties = array();
-
     $properties["items"] = $order_array;
-
     $post["properties"] = $properties;
-
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -195,7 +238,7 @@ class ConveadTracker {
     $post["type"] = "custom";
     $properties["key"] = (string) $key;
     $post["properties"] = $properties;
-
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -206,7 +249,7 @@ class ConveadTracker {
   public function eventUpdateInfo() {
     $post = $this->getDefaultPost();
     $post["type"] = "update_info";
-
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
 
@@ -216,23 +259,56 @@ class ConveadTracker {
    * @param string $title - заголовок страницы
    * @return boolean
    */
-  public function view($url, $title) {
+  public function eventLink($url, $title) {
     $url = (string) $url;
     $post = $this->getDefaultPost();
     $post["type"] = "link";
     $post["title"] = (string) $title;
     $post["url"] = "http://" . $this->url . $url;
     $post["path"] = $url;
-
+    $post = $this->post_encode($post);
     return $this->send($this->getUrl(), $post);
   }
-  
+
   /**
    * 
-   * @param string $path
+   * @param type $order_id - ID заказа в интернет-магазине
+   * @param type $state - статус заказа
+   * @param type $revenue - общая сумма заказа
+   * @param type $order_array массив вида:
+    [
+        {product_id: <product_id>, qnt: <product_count>, price: <product_price>},
+        {...}
+    ]
+   * @return boolean
    */
+  public function webHookOrderUpdate($order_id, $state, $revenue = false, $order_array = false) {
+    $post = array();
+
+    if ($this->guest_uid and $this->generated_uid === false) $post["guest_uid"] = $this->guest_uid;
+    if ($this->visitor_uid) $post["visitor_uid"] = $this->visitor_uid;
+    if (is_array($this->visitor_info) and count($this->visitor_info) > 0) $post["visitor_info"] = $this->visitor_info;
+
+    $post["order_id"] = (string) $order_id;
+    $post["state"] = (string) $state;
+
+    if ($revenue !== false) $post["revenue"] = $revenue;
+    if (is_array($order_array)) $post["items"] = $order_array;
+
+    $headers = array(
+      "HTTP_X_WEBHOOK_TOPIC" => "events/order_update",
+      "HTTP_X_APP_KEY" => "{$this->api_key}"
+    );
+
+    return $this->send($this->getWebHookUrl(), $post, $headers);
+  }
+  
   private function getUrl() {
     return "{$this->protocol}://{$this->host}/watch/event";
+  }
+
+  private function getWebHookUrl() {
+    return "{$this->protocol}://{$this->host}/integration/common/webhook";
   }
 
   private function post_encode($post) { 
@@ -252,35 +328,36 @@ class ConveadTracker {
   }
 
   private function json_fix($data) {
-      # Process arrays
-      if (is_array($data)) {
-        $new = array();
-        foreach ($data as $k => $v) {
-          $new[$this->json_fix($k)] = $this->json_fix($v);
-        }
-        $data = $new;
+    # Process arrays
+    if (is_array($data)) {
+      $new = array();
+      foreach ($data as $k => $v) {
+        $new[$this->json_fix($k)] = $this->json_fix($v);
       }
-      # Process objects
-      else if (is_object($data)) {
-        $datas = get_object_vars($data);
-        foreach ($datas as $m => $v) {
-          $data->$m = $this->json_fix($v);
-        }
+      $data = $new;
+    }
+    # Process objects
+    else if (is_object($data)) {
+      $datas = get_object_vars($data);
+      foreach ($datas as $m => $v) {
+        $data->$m = $this->json_fix($v);
       }
-      # Process strings
-      else if (is_string($data)) {
-        $data = iconv('cp1251', 'utf-8', $data);
-      }
-      return $data;
+    }
+    # Process strings
+    else if (is_string($data)) {
+      $data = iconv('cp1251', 'utf-8', $data);
+    }
+    return $data;
   }
 
-  private function send($url, $post = false, $method = 'POST') {
-    $this->put_log($url, $method, $post);
-
-    $post = $this->post_encode($post);
-
+  private function send($url, $post = false, $custom_headers = array(), $method = 'POST') {
     if (isset($_COOKIE['convead_track_disable']))
       return 'Convead tracking disabled';
+
+    $this->put_log($url, $method, $post, $custom_headers);
+
+    $headers = array("Content-Type: application/x-www-form-urlencoded; charset=utf-8", "Accept:application/json, text/javascript, */*; q=0.01");
+    $headers = array_unique(array_merge($headers, $custom_headers));
 
     $curl = curl_init($url);
 
@@ -301,7 +378,7 @@ class ConveadTracker {
       curl_setopt($curl, CURLOPT_POST, false);
     }
 
-    curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/x-www-form-urlencoded; charset=utf-8", "Accept:application/json, text/javascript, */*; q=0.01"));
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 
     curl_exec($curl);
 
@@ -315,22 +392,26 @@ class ConveadTracker {
   }
 
   private function build_http_query($query) {
-    $query_array = array();
-    foreach( $query as $key => $key_value ){
-      $query_array[] = urlencode( $key ) . '=' . urlencode( $key_value );
-    }
-    return implode('&', $query_array);
+    return http_build_query($query);
   }
 
-  private function put_log($url, $method, $post) {
+  private function put_log($url, $method, $post, $headers) {
     if (!$this->debug) return true;
 
     ob_start();
+    if (count($headers) > 0) {
+      echo "HEADER DATA: ";
+      print_r($headers);
+    }
+    $str_headers = ob_get_clean();
+
+    ob_start();
+    echo "POST DATA: ";
     print_r($post);
-    $string = ob_get_clean();
+    $str_post = ob_get_clean();
     
     $date = date('Y.m.d H:i:s');
-    $row = "{$date}\n{$method} {$url}\n{$string}\n\n";
+    $row = "{$date}\n{$method} {$url}\n{$str_headers}{$str_post}\n";
     $filename = dirname(__FILE__) . "/tracker_debug.log";
     return file_put_contents($filename, $row, FILE_APPEND);
   }
