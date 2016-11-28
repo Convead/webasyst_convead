@@ -4,7 +4,7 @@
  * Класс для работы с сервисом convead.io
  */
 class ConveadTracker {
-  public $version = '1.2.0';
+  public $version = '1.2.1';
 
   public $debug = false;
   public $charset = 'utf-8';
@@ -97,8 +97,7 @@ class ConveadTracker {
     if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
     
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -119,8 +118,7 @@ class ConveadTracker {
     if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
 
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -139,8 +137,7 @@ class ConveadTracker {
     if ($product_name) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url) $post["properties"]["product_url"] = (string) $product_url;
 
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -171,8 +168,7 @@ class ConveadTracker {
     unset($post["host"]);
     unset($post["path"]);
 
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -204,8 +200,7 @@ class ConveadTracker {
     unset($post["host"]);
     unset($post["path"]);
 
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -223,8 +218,7 @@ class ConveadTracker {
     $properties = array();
     $properties["items"] = $order_array;
     $post["properties"] = $properties;
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -238,8 +232,7 @@ class ConveadTracker {
     $post["type"] = "custom";
     $properties["key"] = (string) $key;
     $post["properties"] = $properties;
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -249,8 +242,7 @@ class ConveadTracker {
   public function eventUpdateInfo() {
     $post = $this->getDefaultPost();
     $post["type"] = "update_info";
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -266,8 +258,7 @@ class ConveadTracker {
     $post["title"] = (string) $title;
     $post["url"] = "http://" . $this->url . $url;
     $post["path"] = $url;
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post);
+    return $this->sendEvent($post);
   }
 
   /**
@@ -295,12 +286,7 @@ class ConveadTracker {
     if ($revenue !== false) $post["revenue"] = $revenue;
     if (is_array($order_array)) $post["items"] = $order_array;
 
-    $headers = array(
-      "HTTP_X_WEBHOOK_TOPIC" => "events/order_update",
-      "HTTP_X_APP_KEY" => "{$this->api_key}"
-    );
-
-    return $this->send($this->getWebHookUrl(), $post, $headers);
+    return $this->sendWebHook($post, 'events/order_update');
   }
   
   private function getUrl() {
@@ -311,12 +297,29 @@ class ConveadTracker {
     return "{$this->protocol}://{$this->host}/integration/common/webhook";
   }
 
-  private function post_encode($post) { 
+  private function sendWebHook($post, $topic) {
+    $headers = array(
+      "Content-Type: application/json; charset=utf-8",
+      "X-Webhook-Topic: {$topic}",
+      "X-App-Key: {$this->api_key}"
+    );
+    return $this->send($this->getWebHookUrl(), $this->json_encode($post), $headers, "POST", true);
+  }
+
+  private function sendEvent($post) {
+    $headers = array(
+      "Content-Type: application/x-www-form-urlencoded; charset=utf-8"
+    );
+    $post = $this->post_encode($post);
+    return $this->send($this->getUrl(), $post, $headers);
+  }
+
+  private function post_encode($post) {
     $ret = array('app_key' => $post['app_key']);
     if (!empty($post['visitor_uid'])) $ret['visitor_uid'] = $post['visitor_uid'];
     if (!empty($post['guest_uid'])) $ret['guest_uid'] = $post['guest_uid'];
     $ret['data'] = $this->json_encode($post);
-    return $ret;
+    return $this->build_http_query($ret);
   }
 
   private function json_encode($text) {
@@ -350,13 +353,11 @@ class ConveadTracker {
     return $data;
   }
 
-  private function send($url, $post = false, $custom_headers = array(), $method = 'POST') {
+  private function send($url, $post = false, $custom_headers = array(), $method = 'POST', $customrequest = false) {
     if (isset($_COOKIE['convead_track_disable']))
       return 'Convead tracking disabled';
 
-    $this->put_log($url, $method, $post, $custom_headers);
-
-    $headers = array("Content-Type: application/x-www-form-urlencoded; charset=utf-8", "Accept:application/json, text/javascript, */*; q=0.01");
+    $headers = array("Accept:application/json, text/javascript, */*; q=0.01");
     $headers = array_unique(array_merge($headers, $custom_headers));
 
     $curl = curl_init($url);
@@ -367,11 +368,11 @@ class ConveadTracker {
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
 
-    if ($method != 'POST') curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+    if ($customrequest) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
     
     if ($post) {
       if ($method == 'POST') curl_setopt($curl, CURLOPT_POST, 1);
-      curl_setopt($curl, CURLOPT_POSTFIELDS, $this->build_http_query($post));
+      curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
 
       curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     } else {
@@ -384,18 +385,19 @@ class ConveadTracker {
 
     $this->error = curl_error($curl);
 
-    if ($this->error) return $this->error;
-
     curl_close($curl);
 
-    return true;
+    $this->put_log($url, $method, $post, $custom_headers, $this->error);
+
+    if ($this->error) return $this->error;
+    else return true;
   }
 
   private function build_http_query($query) {
     return http_build_query($query);
   }
 
-  private function put_log($url, $method, $post, $headers) {
+  private function put_log($url, $method, $post, $headers, $response = true) {
     if (!$this->debug) return true;
 
     ob_start();
@@ -409,9 +411,16 @@ class ConveadTracker {
     echo "POST DATA: ";
     print_r($post);
     $str_post = ob_get_clean();
+
+  ob_start();
+    if ($response !== true) {
+      echo "\nRESPONCE: ";
+      print_r($response);
+    }
+    $str_response = ob_get_clean();
     
     $date = date('Y.m.d H:i:s');
-    $row = "{$date}\n{$method} {$url}\n{$str_headers}{$str_post}\n";
+    $row = "{$date}\n{$method} {$url}\n{$str_headers}{$str_post}{$str_response}\n";
     $filename = dirname(__FILE__) . "/tracker_debug.log";
     return file_put_contents($filename, $row, FILE_APPEND);
   }
