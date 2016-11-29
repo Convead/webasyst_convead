@@ -24,4 +24,4 @@ msgid "No Curl"
 msgstr "On the hosting is not installed Curl extension"
 
 msgid "API key"
-msgstr "API key"
+msgstr "APP KEY convead account"

@@ -24,4 +24,4 @@ msgid "No Curl"
 msgstr "На хостинге не установлено расширение Curl"
 
 msgid "API key"
-msgstr "API key"
+msgstr "APP KEY аккаунта Convead"

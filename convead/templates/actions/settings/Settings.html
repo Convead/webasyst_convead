@@ -1,36 +1,36 @@
 <h1>[`Convead settings`]</h1>
 
 <div class="fields form">
-    <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
-        {$wa->csrf()}
+  <form action="?module=plugins&id=convead&action=save" method="post" id="plugins-settings-form">
+    {$wa->csrf()}
 
-        {foreach from=$domains item=domain key=id}
+    {foreach from=$domains item=domain key=id}
 
-            <h3>{$domain['title']}</h3>
-            <div class="field">
-                <div class="name">[`API key`]<br/>
-                </div>
-                <div class="value">
-                    <input type="text" name="shop_convead[options][domains][{$id}][api_key]" value="{if isset($settings.options) and isset($settings.options.domains) and isset($settings.options.domains[$id]) and isset($settings.options.domains[$id].api_key)}{$settings.options.domains[$id].api_key}{/if}" />
-                </div>
-            </div>
-            <hr />
-
-        {/foreach}
-
-        {if !$exist_curl }
-            <div style="padding: 20px; background-color: #ffccbf; margin-bottom: 20px;">
-                <i class="icon16 no"></i>[`No Curl`]
-            </div>
-        {/if}
-
-        <div class="field">
-            <div class="value submit">
-                <input type="submit" class="button green" value="Сохранить">
-                <span id="plugins-settings-form-status" style="display:none">
-                    <i style="vertical-align:middle" class="icon16 yes"></i> [`Saved`]
-                </span>
-            </div>
+      <h3>{$domain['title']}</h3>
+      <div class="field">
+        <div class="name">[`API key`]<br/>
         </div>
-    </form>
+        <div class="value">
+          <input type="text" name="shop_convead[options][domains][{$id}][api_key]" value="{if isset($settings.options) and isset($settings.options.domains) and isset($settings.options.domains[$id]) and isset($settings.options.domains[$id].api_key)}{$settings.options.domains[$id].api_key}{/if}" />
+        </div>
+      </div>
+      <hr />
+
+    {/foreach}
+
+    {if !$exist_curl }
+      <div style="padding: 20px; background-color: #ffccbf; margin-bottom: 20px;">
+        <i class="icon16 no"></i>[`No Curl`]
+      </div>
+    {/if}
+
+    <div class="field">
+      <div class="value submit">
+        <input type="submit" class="button green" value="Сохранить">
+        <span id="plugins-settings-form-status" style="display:none">
+          <i style="vertical-align:middle" class="icon16 yes"></i> [`Saved`]
+        </span>
+      </div>
+    </div>
+  </form>
 </div>
