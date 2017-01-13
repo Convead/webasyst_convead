@@ -7,7 +7,7 @@ return array(
     16 => 'img/logo.png'
   ),
   'shop_settings' => true,
-  'version'       => '2.0',
+  'version'       => '2.1',
   'vendor'        => 1027096,
   'frontend'      => true,
   'handlers'      => array(
