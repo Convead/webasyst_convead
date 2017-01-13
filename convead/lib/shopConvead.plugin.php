@@ -63,18 +63,22 @@ class shopConveadPlugin extends shopPlugin
 			if (isset($products_cart_res[$params['id']])) $products_cart_res[$params['id']]['quantity'] = $params['quantity'];
 		}
 		// / fix old cart value
+		
+		$sku_model = new shopProductSkusModel();
 
 		$products_cart = array();
 		foreach($products_cart_res as $product)
 		{
 			$product_id = $product['product']['id'];
 			if ($product['sku_id'] != $product['product']['sku_id']) $product_id .= 's'.$product['sku_id'];
+			
+			$sku = $sku_model->getSku($product['sku_id']);
 
-			$products_cart[] = array(
+			if ($sku) $products_cart[] = array(
 				'product_id' => $product_id, 
 				'qnt' => $product['quantity'], 
-				'price' => $product['price'],
-				'product_name' => $product['name']
+				'price' => $sku['primary_price'],
+				'product_name' => $product['product']['name']
 			);
 		}
 
@@ -191,13 +195,12 @@ class shopConveadPlugin extends shopPlugin
 		$items_res = $order_items_model->getByField('order_id', $order_id, true);
 		$items = array();
 		$total_price = 0;
-    $sku_model = new shopProductSkusModel();
-    $ret = new stdClass();
+		$sku_model = new shopProductSkusModel();
+		$ret = new stdClass();
 		foreach($items_res as $product)
 		{
-	    $skus = $sku_model->getDataByProductId($product['product_id']);
-	    $product['product'] = reset($skus);
-
+	    	$skus = $sku_model->getDataByProductId($product['product_id']);
+	    	$product['product'] = reset($skus);
 			$product_id = $product['product_id'];
 			if ($product['sku_id'] != $product['product']['id']) $product_id .= 's'.$product['sku_id'];
 
@@ -207,7 +210,7 @@ class shopConveadPlugin extends shopPlugin
 				'price' => $product['price'],
 				'product_name' => $product['name']
 			);
-			$total_price = $total_price + ($product['price']*$product['quantity']);
+			$total_price = $total_price + ($product['price'] * $product['quantity']);
 		}
 		$ret->order_id = $order_id;
 		$ret->items = $items;
