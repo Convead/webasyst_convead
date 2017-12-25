@@ -194,7 +194,6 @@ class shopConveadPlugin extends shopPlugin
  		$order_items_model = new shopOrderItemsModel();
 		$items_res = $order_items_model->getByField('order_id', $order_id, true);
 		$items = array();
-		$total_price = 0;
 		$sku_model = new shopProductSkusModel();
 		$ret = new stdClass();
 		foreach($items_res as $product)
@@ -210,11 +209,10 @@ class shopConveadPlugin extends shopPlugin
 				'price' => $product['price'],
 				'product_name' => $product['name']
 			);
-			$total_price = $total_price + ($product['price'] * $product['quantity']);
 		}
 		$ret->order_id = $order_id;
 		$ret->items = $items;
-		$ret->revenue = $total_price;
+		$ret->revenue = $order['total'];
 		$ret->state = $this->_switchState($order['state_id']);
 		$ret->order = $order;
 		return $ret;
