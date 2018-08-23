@@ -36,7 +36,7 @@ class shopConveadPlugin extends shopPlugin
 
 	public function update_cart($params = array())
 	{
-		if (!($tracker = $this->_include_tracker()) or !class_exists('shopCart')) return false;
+		if (!($tracker = $this->_include_tracker(false)) or !class_exists('shopCart')) return false;
 		
 		$cart = new shopCart();
 		$products_cart_res = $cart->items();
@@ -254,7 +254,7 @@ class shopConveadPlugin extends shopPlugin
     return $tracker;
 	}
 
-	private function _include_tracker()
+	private function _include_tracker($allow_uid_generate = true)
 	{
 		if (!($api_key = self::_get_app_key())) return false;
 
@@ -264,6 +264,7 @@ class shopConveadPlugin extends shopPlugin
 
 		if (isset($_REQUEST['customer_id']))
 		{
+			if (!$allow_uid_generate && $_REQUEST['customer_id'] == 0) return false;
 			// create purchase from admin panel without customer
 			$guest_uid = ($_REQUEST['customer_id'] == 0 ? uniqid() : false);
 			$uid = ($_REQUEST['customer_id'] == 0 ? false : $_REQUEST['customer_id']);

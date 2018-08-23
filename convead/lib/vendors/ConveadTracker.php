@@ -4,13 +4,14 @@
  * Класс для работы с сервисом convead.io
  */
 class ConveadTracker {
-  public $version = '1.2.1';
+  public $version = '1.2.3';
 
   public $debug = false;
   public $charset = 'utf-8';
   public $timeout = 1;
   public $connect_timeout = 1;
   public $error = false;
+  public $generated_uid = false;
   private $api_key;
   private $guest_uid = false;
   private $visitor_uid = false;
@@ -20,7 +21,6 @@ class ConveadTracker {
   private $protocol = "https";
   private $url = false;
   private $domain = false;
-  private $generated_uid = false;
 
   /**
    * 
@@ -183,7 +183,7 @@ class ConveadTracker {
    * @param type $state - статус заказа
    * @return boolean
    */
-  public function eventOrder($order_id, $revenue = false, $order_array = false, $state = false) {
+  public function eventOrder($order_id, $revenue, $order_array, $state = false) {
     $post = $this->getDefaultPost();
     $post["type"] = "purchase";
     $properties = array();
