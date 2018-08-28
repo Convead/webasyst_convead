@@ -265,7 +265,7 @@ class shopConveadPlugin extends shopPlugin
 		if (isset($_REQUEST['customer_id']))
 		{
 			if (!$allow_uid_generate && $_REQUEST['customer_id'] == 0) return false;
-			// create purchase from admin panel without customer
+			// create event from admin panel without customer
 			$guest_uid = ($_REQUEST['customer_id'] == 0 ? uniqid() : false);
 			$uid = ($_REQUEST['customer_id'] == 0 ? false : $_REQUEST['customer_id']);
 		}
@@ -274,6 +274,8 @@ class shopConveadPlugin extends shopPlugin
 			$guest_uid = waRequest::cookie('convead_guest_uid');
 			$uid = (($auth_info = $auth->isAuth()) ? $auth_info['id'] : false);
 		}
+
+		if (!$guest_uid && !$uid) return false;
 
 		$tracker = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
 		
