@@ -277,7 +277,10 @@ class shopConveadPlugin extends shopPlugin
 
 		if (!$guest_uid && !$uid) return false;
 
-		$tracker = new ConveadTracker($api_key, waRequest::server('SERVER_NAME'), $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
+		$routing = wa()->getRouting();
+		$domain = $routing->getDomain();
+
+		$tracker = new ConveadTracker($api_key, $domain, $guest_uid, $uid, (isset($this->visitor_info) ? $this->visitor_info : false));
 		
 		return $tracker;
 	}
