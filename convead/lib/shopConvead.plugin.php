@@ -3,19 +3,30 @@
 class shopConveadPlugin extends shopPlugin
 {
 
-	public function order_state($params)
+	public function order_update($params)
 	{
 		if (!$params['order_id']) return false;
 		if (!($tracker = $this->_include_tracker_anonym())) return false;
-		
+
 		$order_id = $params['order_id'];
 		if (!($order_data = $this->_getOrderData($order_id))) return false;
 
 		$revenue = $order_data ? $order_data->revenue : null;
 		$items = $order_data ? $order_data->items : null;
+
+		$tracker->webHookOrderUpdate($order_id, null, $revenue, $items);
+	}
+
+	public function order_state($params)
+	{
+		if (!$params['order_id']) return false;
+		if (!($tracker = $this->_include_tracker_anonym())) return false;
+
+		$order_id = $params['order_id'];
+
 		$state = $this->_switchState($params['after_state_id']);
 
-		$tracker->webHookOrderUpdate($order_id, $state, $revenue, $items);
+		$tracker->webHookOrderUpdate($order_id, $state);
 	}
 
 	public function order_delete($params)

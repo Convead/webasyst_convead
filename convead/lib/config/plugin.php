@@ -7,7 +7,7 @@ return array(
     16 => 'img/logo.png'
   ),
   'shop_settings' => true,
-  'version'       => '2.4',
+  'version'       => '2.5',
   'vendor'        => 1027096,
   'frontend'      => true,
   'handlers'      => array(
@@ -27,7 +27,8 @@ return array(
     'order_action.process'    => 'order_state',  // В обработке "processing"
     'order_action.restore'    => 'order_state',  // Восстановлен
     'order_action.ship'       => 'order_state',  // Отправлен "shipped"
-    'order_action.refund'     => 'order_state'   // Возврат "refunded"
+    'order_action.refund'     => 'order_state',  // Возврат "refunded"
+    'order_action.edit'       => 'order_update'  // Обновление состава заказа"
   
   ),
 );
