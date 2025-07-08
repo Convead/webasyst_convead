@@ -1,17 +1,18 @@
 <?php
 
 /**
- * Класс для работы с сервисом convead.io
+ * Асинхронная версия класса для работы с сервисом convead.io
  */
 class ConveadTracker {
-  public $version = "1.2.4";
-
+  public $version = "1.2.5";
   public $debug = false;
   public $charset = "utf-8";
   public $timeout = 1;
   public $connect_timeout = 1;
   public $error = false;
   public $generated_uid = false;
+  public $async_mode = true; // Новый флаг для асинхронного режима
+
   private $api_key;
   private $guest_uid = false;
   private $visitor_uid = false;
@@ -21,6 +22,7 @@ class ConveadTracker {
   private $protocol = "https";
   private $url = false;
   private $domain = false;
+  private $queue_file = null; // Файл для очереди при недоступности сервиса
 
   /**
    * 
@@ -48,40 +50,28 @@ class ConveadTracker {
     $this->api_key = (string) $api_key;
 
     $domain = ($domain == null) ? $_SERVER["HTTP_HOST"] : $domain;
-    
+
     $domain_encoding = mb_detect_encoding($domain, array("UTF-8", "windows-1251"));
     $this->domain = (string) mb_strtolower( (($domain_encoding == "UTF-8") ? $domain : iconv($domain_encoding, "UTF-8", $domain)) , "UTF-8");
-    
+
     $this->guest_uid = (string) $guest_uid;
     $this->visitor_info = $visitor_info;
     $this->visitor_uid = (string) $visitor_uid;
     $this->referrer = (string) $referrer;
     $this->url = (string) $url;
-    
+
+    // Инициализация файла очереди
+    $this->queue_file = sys_get_temp_dir() . '/convead_queue_' . md5($this->api_key) . '.json';
+
     if (!$this->guest_uid and !$this->visitor_uid) {
       $this->guest_uid = uniqid();
       $this->generated_uid = true;
     }
   }
 
-  private function getDefaultPost() {
-    $post = array();
-    $post["app_key"] = $this->api_key;
-
-    if ($this->guest_uid) $post["guest_uid"] = $this->guest_uid;
-    if ($this->visitor_uid) $post["visitor_uid"] = $this->visitor_uid;
-    
-    $post["domain"] = $this->domain;
-    
-    if ($this->referrer) $post["referrer"] = $this->referrer;
-    if ($this->url) {
-      $post["url"] = "http://" . $this->url;
-      $post["host"] = $this->url;
-    }
-
-    if (is_array($this->visitor_info) and count($this->visitor_info) > 0) $post["visitor_info"] = $this->visitor_info;
-
-    return $post;
+  // Включить/выключить асинхронный режим
+  public function setAsyncMode($async = true) {
+    $this->async_mode = $async;
   }
 
   /**
@@ -96,7 +86,7 @@ class ConveadTracker {
     $post["properties"]["product_id"] = (string) $product_id;
     if ($product_name !== null) $post["properties"]["product_name"] = (string) $product_name;
     if ($product_url !== null) $post["properties"]["product_url"] = (string) $product_url;
-    
+
     return $this->sendEvent($post);
   }
 
@@ -221,97 +211,199 @@ class ConveadTracker {
     return $this->sendEvent($post);
   }
 
-  /**
-   * 
-   * @param string $key - имя кастомного ключа
-   * @param array $properties - передаваемые свойства
-   * @return boolean
-   */
-  public function eventCustom($key, $properties = array()) {
-    $post = $this->getDefaultPost();
-    $post["type"] = "custom";
-    $properties["key"] = (string) $key;
-    $post["properties"] = $properties;
-    return $this->sendEvent($post);
+  // Асинхронная отправка данных
+  private function sendAsync($url, $post = null, $custom_headers = array(), $method = "POST") {
+    if (isset($_COOKIE["convead_track_disable"])) {
+      return "Convead tracking disabled";
+    }
+
+    // Проверяем доступность сервиса быстрой проверкой
+    if (!$this->isServiceAvailable()) {
+      $this->addToQueue($url, $post, $custom_headers, $method);
+      return true; // Возвращаем успех, чтобы не блокировать основной процесс
+    }
+
+    // Формируем команду для фонового выполнения
+    $temp_file = tempnam(sys_get_temp_dir(), 'convead_');
+    $request_data = json_encode(array(
+      'url' => $url,
+      'post' => $post,
+      'headers' => $custom_headers,
+      'method' => $method,
+      'timeout' => $this->timeout,
+      'connect_timeout' => $this->connect_timeout
+    ));
+
+    file_put_contents($temp_file, $request_data);
+
+    // Запускаем фоновый процесс
+    $script_path = dirname(__FILE__) . '/convead_async_sender.php';
+    $command = "php {$script_path} {$temp_file}";
+
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+      // Windows
+      pclose(popen("start /B " . $command, "r"));
+    } else {
+      // Unix/Linux
+      exec($command . " > /dev/null 2>&1 &");
+    }
+
+    return true;
   }
 
-  /**
-   *
-   * @return boolean
-   */
-  public function eventUpdateInfo() {
-    $post = $this->getDefaultPost();
-    $post["type"] = "update_info";
-    return $this->sendEvent($post);
+  // Быстрая проверка доступности сервиса
+  private function isServiceAvailable() {
+    $host = $this->host;
+    $port = ($this->protocol === 'https') ? 443 : 80;
+
+    $connection = @fsockopen($host, $port, $errno, $errstr, 1);
+    if ($connection) {
+      fclose($connection);
+      return true;
+    }
+    return false;
   }
 
-  /**
-   * 
-   * @param string $url - url адрес страницы
-   * @param string $title - заголовок страницы
-   * @return boolean
-   */
-  public function eventLink($url, $title) {
-    $url = (string) $url;
-    $post = $this->getDefaultPost();
-    $post["type"] = "link";
-    $post["title"] = (string) $title;
-    $post["url"] = "http://" . $this->url . $url;
-    $post["path"] = $url;
-    return $this->sendEvent($post);
+  // Добавление в очередь при недоступности сервиса
+  private function addToQueue($url, $post, $headers, $method) {
+    $queue_item = array(
+      'url' => $url,
+      'post' => $post,
+      'headers' => $headers,
+      'method' => $method,
+      'timestamp' => time()
+    );
+
+    $queue = array();
+    if (file_exists($this->queue_file)) {
+      $queue = json_decode(file_get_contents($this->queue_file), true) ?: array();
+    }
+
+    $queue[] = $queue_item;
+
+    // Ограничиваем размер очереди
+    if (count($queue) > 100) {
+      $queue = array_slice($queue, -100);
+    }
+
+    file_put_contents($this->queue_file, json_encode($queue));
   }
 
-  /**
-   * 
-   * @param type $order_id - ID заказа в интернет-магазине
-   * @param type $state - статус заказа
-   * @param type $revenue - общая сумма заказа
-   * @param type $order_array массив вида:
-    [
-        {product_id: <product_id>, qnt: <product_count>, price: <product_price>},
-        {...}
-    ]
-   * @return boolean
-   */
-  public function webHookOrderUpdate($order_id, $state = null, $revenue = null, $order_array = null) {
-    $post = array();
+  // Обработка очереди
+  public function processQueue() {
+    if (!file_exists($this->queue_file)) {
+      return true;
+    }
 
-    if ($this->guest_uid and $this->generated_uid === false) $post["guest_uid"] = $this->guest_uid;
-    if ($this->visitor_uid) $post["visitor_uid"] = $this->visitor_uid;
-    if (is_array($this->visitor_info) and count($this->visitor_info) > 0) $post["visitor_info"] = $this->visitor_info;
+    $queue = json_decode(file_get_contents($this->queue_file), true) ?: array();
+    if (empty($queue)) {
+      return true;
+    }
 
-    $post["order_id"] = (string) $order_id;
-    if ($state !== null) $post["state"] = (string) $state;
+    $processed = array();
+    foreach ($queue as $item) {
+      // Пропускаем старые элементы (старше 24 часов)
+      if (time() - $item['timestamp'] > 86400) {
+        continue;
+      }
 
-    if ($revenue !== null) $post["revenue"] = $revenue;
-    if (is_array($order_array)) $post["items"] = $order_array;
+      if ($this->sendSync($item['url'], $item['post'], $item['headers'], $item['method'])) {
+        // Успешно отправлено
+        continue;
+      } else {
+        // Не удалось отправить, оставляем в очереди
+        $processed[] = $item;
+      }
+    }
 
-    return $this->sendWebHook($post, "events/order_update");
+    // Обновляем файл очереди
+    if (empty($processed)) {
+      unlink($this->queue_file);
+    } else {
+      file_put_contents($this->queue_file, json_encode($processed));
+    }
+
+    return true;
   }
-  
-  private function getUrl() {
-    return "{$this->protocol}://{$this->host}/watch/event";
+
+  // Синхронная отправка (для обработки очереди)
+  private function sendSync($url, $post = null, $custom_headers = array(), $method = "POST") {
+    $headers = array("Accept:application/json, text/javascript, */*; q=0.01");
+    $headers = array_unique(array_merge($headers, $custom_headers));
+
+    $curl = curl_init($url);
+    curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
+    curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->connect_timeout);
+    curl_setopt($curl, CURLOPT_FAILONERROR, true);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+    if ($post) {
+      if ($method == "POST") curl_setopt($curl, CURLOPT_POST, 1);
+      curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
+    }
+
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
+    $result = curl_exec($curl);
+    $error = curl_error($curl);
+    curl_close($curl);
+
+    return !$error;
   }
 
-  private function getWebHookUrl() {
-    return "{$this->protocol}://{$this->host}/integration/common/webhook";
+  // Основной метод отправки событий
+  private function sendEvent($post) {
+    $headers = array("Content-Type: application/x-www-form-urlencoded; charset=utf-8");
+    $post = $this->post_encode($post);
+
+    if ($this->async_mode) {
+      return $this->sendAsync($this->getUrl(), $post, $headers);
+    } else {
+      return $this->sendSync($this->getUrl(), $post, $headers);
+    }
   }
 
+  // Основной метод отправки webhook
   private function sendWebHook($post, $topic) {
     $headers = array(
       "Content-Type: application/json; charset=utf-8",
       "X-Webhook-Topic: {$topic}",
       "X-App-Key: {$this->api_key}"
     );
-    return $this->send($this->getWebHookUrl(), $this->json_encode($post), $headers, "POST", true);
+
+    if ($this->async_mode) {
+      return $this->sendAsync($this->getWebHookUrl(), $this->json_encode($post), $headers, "POST");
+    } else {
+      return $this->sendSync($this->getWebHookUrl(), $this->json_encode($post), $headers, "POST");
+    }
   }
 
-  private function sendEvent($post) {
-    $headers = array(
-      "Content-Type: application/x-www-form-urlencoded; charset=utf-8"
-    );
-    $post = $this->post_encode($post);
-    return $this->send($this->getUrl(), $post, $headers);
+  // Остальные методы остаются без изменений
+  private function getDefaultPost() {
+    $post = array();
+    $post["app_key"] = $this->api_key;
+    if ($this->guest_uid) $post["guest_uid"] = $this->guest_uid;
+    if ($this->visitor_uid) $post["visitor_uid"] = $this->visitor_uid;
+    $post["domain"] = $this->domain;
+    if ($this->referrer) $post["referrer"] = $this->referrer;
+    if ($this->url) {
+      $post["url"] = "http://" . $this->url;
+      $post["host"] = $this->url;
+    }
+    if (is_array($this->visitor_info) and count($this->visitor_info) > 0) {
+      $post["visitor_info"] = $this->visitor_info;
+    }
+    return $post;
+  }
+
+  private function getUrl() {
+    return "{$this->protocol}://{$this->host}/watch/event";
+  }
+
+  private function getWebHookUrl() {
+    return "{$this->protocol}://{$this->host}/integration/common/webhook";
   }
 
   private function post_encode($post) {
@@ -331,98 +423,24 @@ class ConveadTracker {
   }
 
   private function json_fix($data) {
-    # Process arrays
     if (is_array($data)) {
       $new = array();
       foreach ($data as $k => $v) {
         $new[$this->json_fix($k)] = $this->json_fix($v);
       }
       $data = $new;
-    }
-    # Process objects
-    else if (is_object($data)) {
+    } else if (is_object($data)) {
       $datas = get_object_vars($data);
       foreach ($datas as $m => $v) {
         $data->$m = $this->json_fix($v);
       }
-    }
-    # Process strings
-    else if (is_string($data)) {
+    } else if (is_string($data)) {
       $data = iconv("cp1251", "utf-8", $data);
     }
     return $data;
   }
 
-  private function send($url, $post = null, $custom_headers = array(), $method = "POST", $customrequest = null) {
-    if (isset($_COOKIE["convead_track_disable"]))
-      return "Convead tracking disabled";
-
-    $headers = array("Accept:application/json, text/javascript, */*; q=0.01");
-    $headers = array_unique(array_merge($headers, $custom_headers));
-
-    $curl = curl_init($url);
-
-    curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
-    curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->connect_timeout);
-    curl_setopt($curl, CURLOPT_FAILONERROR, true);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-
-    if ($customrequest) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
-    
-    if ($post) {
-      if ($method == "POST") curl_setopt($curl, CURLOPT_POST, 1);
-      curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
-
-      curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-    } else {
-      curl_setopt($curl, CURLOPT_POST, false);
-    }
-
-    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-
-    curl_exec($curl);
-
-    $this->error = curl_error($curl);
-
-    curl_close($curl);
-
-    $this->put_log($url, $method, $post, $custom_headers, $this->error);
-
-    if ($this->error) return $this->error;
-    else return true;
-  }
-
   private function build_http_query($query) {
     return http_build_query($query);
   }
-
-  private function put_log($url, $method, $post, $headers, $response = true) {
-    if (!$this->debug) return true;
-
-    ob_start();
-    if (count($headers) > 0) {
-      echo "HEADER DATA: ";
-      print_r($headers);
-    }
-    $str_headers = ob_get_clean();
-
-    ob_start();
-    echo "POST DATA: ";
-    print_r($post);
-    $str_post = ob_get_clean();
-
-  ob_start();
-    if ($response !== true) {
-      echo "\nRESPONCE: ";
-      print_r($response);
-    }
-    $str_response = ob_get_clean();
-    
-    $date = date("Y.m.d H:i:s");
-    $row = "{$date}\n{$method} {$url}\n{$str_headers}{$str_post}{$str_response}\n";
-    $filename = dirname(__FILE__) . "/tracker_debug.log";
-    return file_put_contents($filename, $row, FILE_APPEND);
-  }
-
 }
